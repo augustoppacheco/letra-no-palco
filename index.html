@@ -170,6 +170,8 @@ body.full .stage{grid-template-columns:minmax(0,1fr)}
 .songhead .t{font:800 22px/1.1 var(--f-display)}
 .tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;color:var(--paper)}
+.chip.wrong{border-color:rgba(255,122,138,.5);color:var(--rose)}
+.hunt{font:700 15px/1.3 var(--f-body);color:var(--teal);min-height:20px}
 .chip:hover,.chip[aria-expanded="true"]{background:var(--ink-3);border-color:var(--muted)}
 .tools-panel{position:absolute;right:max(16px,env(safe-area-inset-right));top:calc(100% - 4px);z-index:30;width:min(360px,calc(100vw - 32px));background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .tp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted);font-weight:700}
@@ -249,6 +251,7 @@ body.full .strip input{display:none}
             <button class="mic" id="listenBtn" title="Liga o microfone e fica ouvindo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="listenLbl">Começar a ouvir</span></button>
             <div class="now">
               <div class="songhead"><div class="t" id="songTitle">Nenhuma música</div><div class="a" id="songArtist">Cante ou digite um trecho</div></div>
+              <button class="chip wrong" id="wrongBtn" hidden title="Busca de novo, sem esta música">Não é essa · buscar de novo</button>
               <span class="pill" id="status"><span class="dot"></span><span id="statusTxt">Microfone desligado</span></span>
             </div>
             <div class="tools">
@@ -284,7 +287,8 @@ body.full .strip input{display:none}
               <div class="empty-stage" id="emptyStage">
                 <div class="es-mic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
                 <h2>Comece a cantar</h2>
-                <p>Toque em <b>Começar a ouvir</b> e cante duas frases.<br>A letra aparece aqui e vai passando junto com você.</p>
+                <p>Toque em <b>Começar a ouvir</b> e cante à vontade.<br>Ele ouve uns 20 segundos, confere a letra e só então abre a música.</p>
+                <div class="hunt" id="huntInfo" aria-live="polite"></div>
               </div>
               <div class="progress" aria-hidden="true"><i id="prog"></i></div>
             </div>
@@ -385,6 +389,9 @@ body.full .strip input{display:none}
           <label class="f">Idioma que você canta
             <select id="langSel"><option value="pt-BR">Português (Brasil)</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select>
           </label>
+          <label class="f">Quanto tempo ouvir antes de buscar a música
+            <select id="waitSel"><option value="10">10 segundos</option><option value="20">20 segundos</option><option value="30">30 segundos</option></select>
+          </label>
           <label class="f">Velocidade da rolagem automática (linhas por minuto)<input type="number" id="autoSpeed" min="4" max="60" value="16"></label>
           <label class="row small"><input type="checkbox" class="chk" id="autoSwitch" checked> Avisar quando eu começar outra música (você confirma a troca)</label>
         </div>
@@ -449,7 +456,7 @@ const songKey = (title, artist) => norm(title)+'|'+norm(artist);
 const LS='letraNoPalco.v1';
 let db = (()=>{ try{ return JSON.parse(localStorage.getItem(LS)) || null; }catch{ return null; } })() || {};
 db.songs ||= {}; db.setlists ||= []; db.prefs ||= {};
-const prefs = Object.assign({view:'slide', font:34, lang:'pt-BR', autoSpeed:16, autoSwitch:true, follow:'voz', pdf:{}}, db.prefs);
+const prefs = Object.assign({waitSec:20, view:'slide', font:34, lang:'pt-BR', autoSpeed:16, autoSwitch:true, follow:'voz', pdf:{}}, db.prefs);
 db.prefs = prefs;
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem(LS, JSON.stringify(db)); }catch(e){ toast('Não consegui salvar no aparelho: '+e.message, 5000); } }, 200); }
@@ -599,7 +606,7 @@ async function songFromHit(hit){
 
 /* ================= estado do palco ================= */
 const S = { song:null, items:[], lyIdx:[], lyWords:[], cur:-1, listening:false, rec:null,
-  finals:[], missBuf:[], interim:'', lastSearchAt:0, searching:false, misses:0, cands:[], countedThisSession:new Set(),
+  finals:[], missBuf:[], hunt:{text:[],start:0,tries:0,nextAt:0,excluded:new Set(),ranked:[]}, interim:'', lastSearchAt:0, searching:false, misses:0, cands:[], countedThisSession:new Set(),
   voice:{hist:new Array(12).fill(0), frames:0, key:null}, audio:null, autoT:null, setlist:null, slPos:0, sugKey:null };
 
 function setStatus(txt, on){ $('#statusTxt').textContent=txt; $('#status').classList.toggle('on', !!on); }
@@ -620,7 +627,7 @@ function loadSong(song, {from='manual', cands=null}={}){
 
 function renderSong(){
   const s=S.song, L=$('#lyrics');
-  $('#emptyStage').hidden=!!s; $('#cursorMark').hidden=!s; $('#editSongBtn').hidden=!s; applyView();
+  $('#emptyStage').hidden=!!s; $('#cursorMark').hidden=!s; $('#editSongBtn').hidden=!s; $('#wrongBtn').hidden=!s; applyView();
   if(!s){ $('#keyBox').hidden=true; S.rows=[]; renderSlide(); L.innerHTML=''; $('#songTitle').textContent='Nenhuma música'; $('#songArtist').textContent='Cante ou digite um trecho'; $('#keyLbl').textContent='Tom —'; return; }
   $('#songTitle').textContent=s.title; $('#songArtist').textContent=s.artist+(s.genre?' · '+s.genre:'');
   let parsed, chordsMode=false;
@@ -717,39 +724,81 @@ function libraryMatch(qw){
 function songContains(song, qw){
   const bg=new Set(bigrams(words((song.lyrics||'')+'\n'+(song.chords||'')))); const qb=bigrams(qw); let h=0; for(const b of qb) if(bg.has(b)) h++; return {h, r: qb.length? h/qb.length:0};
 }
+/* ---------- reconhecer a música: ouvir bastante, conferir, só então abrir ---------- */
+function chunks(W){ const n=W.length, L=8, out=new Set([W.slice(-L).join(' ')]); if(n>=2*L){ const m=Math.floor(n/2); out.add(W.slice(m-L/2,m+L/2).join(' ')); } if(n>=L+4) out.add(W.slice(0,L).join(' ')); return [...out]; }
+function scoreSong(s, WB){ const txt=(s.lyrics||'')+'\n'+(s.chords||''); if(!txt.trim()) return {h:0,r:0}; const bg=s._bg||(s._bg=new Set(bigrams(words(txt)))); let h=0; for(const b of WB) if(bg.has(b)) h++; return {h, r:WB.length? h/WB.length:0}; }
+async function rankSongs(W, excluded=new Set()){
+  const WB=bigrams(W); if(WB.length<3) return null;
+  const ranked=[];
+  for(const s of allSongs()){ if(excluded.has(s.id)) continue; const sc=scoreSong(s,WB); if(sc.h>=2) ranked.push({song:s, hit:{title:s.title, artist:s.artist, genre:s.genre}, ...sc, votes:0}); }
+  if(navigator.onLine){
+    S.searching=true; setStatus('Conferindo qual é a música…', S.listening);
+    try{
+      const lists=await Promise.all(chunks(W).map(q=>searchByLyric(q).catch(()=>[])));
+      const agg=new Map();
+      lists.forEach(l=>l.slice(0,5).forEach((h,i)=>{ const k=songKey(h.title,h.artist); if(excluded.has(k)) return; const a=agg.get(k)||{hit:h, votes:0}; a.votes+=5-i; agg.set(k,a); }));
+      const top=[...agg.values()].sort((a,b)=>b.votes-a.votes).slice(0,6).filter(a=>!ranked.some(r=>r.song.id===songKey(a.hit.title,a.hit.artist)));
+      const got=await Promise.all(top.map(a=>songFromHit(a.hit).then(s=>({s,a})).catch(()=>null)));
+      for(const x of got){ if(x) ranked.push({song:x.s, hit:x.a.hit, ...scoreSong(x.s,WB), votes:x.a.votes}); }
+    }finally{ S.searching=false; }
+  }
+  ranked.sort((a,b)=>b.h-a.h || b.votes-a.votes);
+  const best=ranked[0], second=ranked[1];
+  const confident = !!best && best.h>=4 && best.r>=.18 && (!second || best.h>=second.h*1.5 || best.h-second.h>=3);
+  return {ranked, best, confident};
+}
+function resetHunt(keepExcluded){ S.hunt={text:[], start:0, tries:0, nextAt:0, excluded: keepExcluded? S.hunt.excluded : new Set(), ranked: keepExcluded? S.hunt.ranked : []}; }
+function huntTick(){
+  if(S.song){ return; }
+  const h=S.hunt, need=prefs.waitSec*1000, el=h.start? Date.now()-h.start : 0;
+  const info=$('#huntInfo');
+  if(!S.listening){ info.textContent=''; return; }
+  info.textContent = !h.start? 'Ouvindo… pode começar a cantar' : S.searching? 'Conferindo qual é a música…' : el<need? `Ouvindo… ${Math.floor(el/1000)} de ${need/1000} segundos` : 'Ainda conferindo, continue cantando…';
+  $('#prog').style.width = h.start? Math.min(100, el/need*100)+'%' : '0';
+  if(h.start && el>=need && words(h.text.join(' ')).length>=10 && Date.now()>=h.nextAt && !S.searching) runHunt();
+}
+setInterval(huntTick, 1000);
+async function runHunt(){
+  const h=S.hunt; h.tries++; h.nextAt=Date.now()+8000;
+  let res; try{ res=await rankSongs(words(h.text.join(' ')).slice(-60), h.excluded); }catch(e){ setStatus('Erro na busca: '+e.message, S.listening); return; }
+  if(!res || S.song) return;
+  h.ranked=res.ranked;
+  if(res.confident){ const ranked=res.ranked; resetHunt(); S.hunt.ranked=ranked; loadSong(res.best.song,{from:'voice', cands:ranked.slice(1).map(r=>r.hit)}); setStatus('Música encontrada e salva', S.listening); setTimeout(follow,400); return; }
+  if(h.tries>=3 && res.ranked.length){ S.cands=res.ranked.slice(0,4).map(r=>r.hit); renderCands(); setStatus('Não tenho certeza: veja as possíveis em "Não era essa?"', S.listening); }
+  else setStatus('Ainda não tenho certeza, continue cantando…', S.listening);
+}
+/* usado com uma música aberta (troca) ou quando você digita um trecho */
 async function identify(text, {force=false}={}){
-  const qw=words(text).slice(-14);
-  if(qw.length<4) return;
-  const lib=libraryMatch(qw);
-  if(lib){ if(!S.song){ setStatus('Achei nas suas músicas', S.listening); loadSong(lib,{from:'voice'}); } else if(lib.id!==S.song.id) offerSwitch(lib); return; }
-  const now=Date.now(); if(S.searching || (!force && now-S.lastSearchAt<5000)) return;
-  if(!navigator.onLine){ setStatus('Sem internet: só procuro nas suas músicas', S.listening); return; }
-  S.searching=true; S.lastSearchAt=now; setStatus('Procurando a música…', S.listening);
-  try{
-    const q=qw.slice(-9).join(' ');
-    const hits=await searchByLyric(q);
-    if(!hits.length){ setStatus('Não achei ainda, continue cantando', S.listening); return; }
-    let chosen=null;
-    for(const h of hits.slice(0,3)){
-      const s=await songFromHit(h);
-      if(s.lyrics){ const c=songContains(s, qw); if(c.h>=2 || c.r>=.3){ chosen=s; break; } }
-      if(!chosen && !s.lyrics && h===hits[0]) chosen=s; // sem letra, mas é o melhor palpite
-    }
-    if(!chosen && S.song){ S.cands=hits.slice(0,3); renderCands(); setStatus('Parece outra música: veja ao lado', S.listening); return; }
-    if(!chosen) chosen=await songFromHit(hits[0]);
-    if(S.song && chosen.id===S.song.id){ setStatus('Ouvindo', S.listening); return; }
-    if(S.song){ offerSwitch(chosen, hits); return; }
-    loadSong(chosen,{from:'voice', cands:hits});
-    setStatus(chosen.lyrics? 'Música encontrada e salva' : 'Achei o nome, mas não a letra', S.listening);
-  }catch(e){ setStatus('Erro na busca: '+e.message, S.listening); }
-  finally{ S.searching=false; }
+  const W=words(text); if(W.length<4) return;
+  const now=Date.now(); if(S.searching || (!force && now-S.lastSearchAt<5000)) return; S.lastSearchAt=now;
+  const ex=new Set(S.hunt.excluded); if(S.song) ex.add(S.song.id);
+  let res; try{ res=await rankSongs(W, ex); }catch(e){ setStatus('Erro na busca: '+e.message, S.listening); return; }
+  const b=res?.best;
+  if(!b || b.h<2){ setStatus('Não achei. Continue cantando ou digite outro trecho', S.listening); return; }
+  if(S.song){ if(res.confident || b.h>=3) offerSwitch(b.song, res.ranked.slice(1).map(r=>r.hit)); return; }
+  resetHunt(); S.hunt.ranked=res.ranked;
+  loadSong(b.song,{from:'voice', cands:res.ranked.slice(1).map(r=>r.hit)});
+  setStatus(res.confident? 'Música encontrada e salva' : 'Achei esta. Se não for, toque em Não é essa', S.listening);
+}
+/* botão "Não é essa" */
+function wrongSong(){
+  const s=S.song; if(!s) return;
+  S.hunt.excluded.add(s.id);
+  if(S.countedThisSession.has(s.id)){ s.timesSung=Math.max(0,(s.timesSung||1)-1); S.countedThisSession.delete(s.id); }
+  if(!s.timesSung && !(s.chords||'').trim() && Date.now()-(s.addedAt||0)<3600e3) delete db.songs[s.id];
+  save();
+  const next=(S.hunt.ranked||[]).find(r=>!S.hunt.excluded.has(r.song.id) && r.h>=3);
+  S.song=null; renderSong();
+  if(next){ loadSong(next.song,{from:'voice', cands:S.hunt.ranked.filter(r=>r!==next && !S.hunt.excluded.has(r.song.id)).map(r=>r.hit)}); setStatus('Abri a próxima mais provável. Se não for, toque de novo em Não é essa', S.listening); return; }
+  const keep=S.hunt.text.slice(); resetHunt(true); S.hunt.text=keep;
+  S.hunt.start = keep.length? Date.now()-prefs.waitSec*1000+8000 : 0;
+  setStatus(S.listening? 'Certo, vou ouvir mais um pouco. Continue cantando' : 'Ligue o microfone ou digite outro trecho', S.listening);
 }
 function onFinal(t){
   t=t.trim(); if(!t) return;
   S.finals.push(t); if(S.finals.length>12) S.finals.shift(); S.interim='';
   showHeard();
-  const buf=S.finals.slice(-3).join(' ');
-  if(!S.song){ identify(buf); return; }
+  if(!S.song){ if(!S.hunt.start) S.hunt.start=Date.now(); S.hunt.text.push(t); huntTick(); return; }
   const qw=words(t);
   if(qw.length>=4){
     const c=songContains(S.song, qw);
@@ -867,7 +916,7 @@ document.addEventListener('keydown', e=>{
   else if((e.key==='x'||e.key==='X') && offered){ e.preventDefault(); rejectOffer(); }
 });
 $('#typeIn').addEventListener('keydown', e=>{ if(e.key==='Enter'){ const t=e.target.value.trim(); if(!t) return; e.target.value=''; if(!S.song) identify(t,{force:true}); else { S.finals.push(t); showHeard(); const c=songContains(S.song, words(t)); if(c.h===0 && words(t).length>=4) identify(t,{force:true}); else follow(); } } });
-$('#newSongBtn').onclick=()=>{ hideOffer(); S.song=null; S.finals=[]; S.interim=''; renderSong(); $('#candBox').hidden=true; setStatus(S.listening?'Ouvindo: cante a próxima':'Microfone desligado', S.listening); };
+$('#newSongBtn').onclick=()=>{ hideOffer(); resetHunt(); S.song=null; S.finals=[]; S.interim=''; renderSong(); $('#candBox').hidden=true; setStatus(S.listening?'Ouvindo: cante a próxima':'Microfone desligado', S.listening); };
 $('#editSongBtn').onclick=()=> openEditor(S.song);
 
 /* ---------- candidatos ---------- */
@@ -875,7 +924,7 @@ function renderCands(){
   const box=$('#cands'); $('#candBox').hidden=!S.cands.length;
   box.innerHTML=S.cands.map((c,i)=>`<button data-i="${i}"><b>${esc(c.title)}</b> <span class="muted">· ${esc(c.artist)}</span></button>`).join('');
 }
-$('#cands').onclick=async e=>{ const b=e.target.closest('button'); if(!b) return; const c=S.cands[+b.dataset.i]; setStatus('Abrindo…', S.listening); const s=await songFromHit(c); if(S.song){ S.song.timesSung=Math.max(0,(S.song.timesSung||1)-1); S.countedThisSession.delete(S.song.id); } loadSong(s,{from:'voice'}); };
+$('#cands').onclick=async e=>{ const b=e.target.closest('button'); if(!b) return; const c=S.cands[+b.dataset.i]; setStatus('Abrindo…', S.listening); const s=await songFromHit(c); if(S.song){ S.hunt.excluded.add(S.song.id); S.song.timesSung=Math.max(0,(S.song.timesSung||1)-1); S.countedThisSession.delete(S.song.id); } loadSong(s,{from:'voice'}); };
 
 /* ---------- sugestões de medley ---------- */
 const keyCompat=(a,b)=>{ if(!a||!b) return 0; const pa=a.minor?(a.pc+3)%12:a.pc, pb=b.minor?(b.pc+3)%12:b.pc; const d=((pb-pa)%12+12)%12; if(d===0) return 3; if(d===5||d===7) return 2; if(d===2||d===10) return 1; return 0; };
@@ -928,6 +977,7 @@ function renderSug(list){
     <div class="why">${esc(c.why)}</div></button>`).join('') || '<div class="small muted">Procurando…</div>';
 }
 $('#sug').onclick=async e=>{ const b=e.target.closest('.sg'); if(!b) return; const c=lastSug[+b.dataset.i]; const s=c.song || await songFromHit(c.hit); loadSong(s,{from:'manual'}); };
+$('#wrongBtn').onclick=wrongSong;
 $('#sideBtn').onclick=()=>document.body.classList.toggle('side-open');
 $('#sideClose').onclick=()=>document.body.classList.remove('side-open');
 $('#sug').addEventListener('click',()=>document.body.classList.remove('side-open'));
@@ -1084,6 +1134,7 @@ $('#slList').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; con
   if(b.dataset.a==='del'){ db.setlists=db.setlists.filter(x=>x.id!==id); save(); renderSetlists(); } };
 
 /* ================= ajustes ================= */
+$('#waitSel').value=String(prefs.waitSec); $('#waitSel').onchange=e=>{ prefs.waitSec=+e.target.value; save(); };
 $('#langSel').value=prefs.lang; $('#langSel').onchange=e=>{ prefs.lang=e.target.value; save(); if(S.listening){ stopListening(); startListening(); } };
 $('#autoSpeed').value=prefs.autoSpeed; $('#autoSpeed').onchange=e=>{ prefs.autoSpeed=+e.target.value||16; save(); setupAuto(); };
 $('#autoSwitch').checked=prefs.autoSwitch; $('#autoSwitch').onchange=e=>{ prefs.autoSwitch=e.target.checked; save(); };
@@ -1103,7 +1154,7 @@ document.querySelector('nav.tabs').onclick=e=>{ const b=e.target.closest('button
 /* início */
 applyFont(); $('#followMode').value=prefs.follow; setupAuto(); renderSong(); applyView();
 if(!SR){ $('#statusTxt').textContent='Sem reconhecimento de voz aqui (use o Chrome)'; }
-window.__app={S, db, identify, onFinal, hooks, parseChart, transposeLine, estimateKey};
+window.__app={S, db, wrongSong, huntTick, identify, onFinal, hooks, parseChart, transposeLine, estimateKey};
 </script>
 </body>
 </html>
