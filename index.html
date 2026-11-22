@@ -180,6 +180,17 @@ body.full .stage{grid-template-columns:minmax(0,1fr)}
 .secbtn.k-pre{color:var(--amber-2)}
 .secbtn.on{background:var(--paper);color:var(--ink);border-color:var(--paper)}
 .secbtn:hover{border-color:var(--muted)}
+.pick{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;background:inherit;z-index:2;overflow:auto}
+.pk-ey{font:800 clamp(22px,3.2vw,32px)/1.1 var(--f-display)}
+.pk-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;width:min(900px,100%)}
+.pk{text-align:left;background:var(--ink);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pk:hover,.pk:focus-visible{border-color:var(--amber);background:#1a1726}
+.pk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.pk-t{font:800 19px/1.2 var(--f-display)}
+.pk-b{flex:none;font:700 10px/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;background:var(--amber);color:#201400;border-radius:999px;padding:4px 8px}
+.pk-a{color:var(--muted);font-size:14px}
+.pk-s{font-size:15px;color:var(--paper);opacity:.85;font-style:italic}
+.pk-m{height:4px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:4px}.pk-m i{display:block;height:100%;background:var(--teal)}
 .chip:hover,.chip[aria-expanded="true"]{background:var(--ink-3);border-color:var(--muted)}
 .tools-panel{position:absolute;right:max(16px,env(safe-area-inset-right));top:calc(100% - 4px);z-index:30;width:min(360px,calc(100vw - 32px));background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .tp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted);font-weight:700}
@@ -304,8 +315,13 @@ body.full .strip input{display:none}
               <div class="empty-stage" id="emptyStage">
                 <div class="es-mic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
                 <h2>Comece a cantar</h2>
-                <p>Toque em <b>Começar a ouvir</b> e cante à vontade.<br>Ele ouve uns 20 segundos, confere a letra e só então abre a música.</p>
+                <p>Toque em <b>Começar a ouvir</b> e cante à vontade.<br>Depois de uns 20 segundos aparecem as músicas mais parecidas pra você escolher.</p>
                 <div class="hunt" id="huntInfo" aria-live="polite"></div>
+              </div>
+              <div class="pick" id="pick" hidden>
+                <div class="pk-ey">Qual dessas é?</div>
+                <div class="pk-list" id="pickList"></div>
+                <button class="btn ghost small" id="pickNone">Nenhuma dessas · continuar ouvindo</button>
               </div>
               <div class="progress" aria-hidden="true"><i id="prog"></i></div>
             </div>
@@ -645,7 +661,7 @@ function loadSong(song, {from='manual', cands=null}={}){
 
 function renderSong(){
   const s=S.song, L=$('#lyrics');
-  $('#emptyStage').hidden=!!s; $('#cursorMark').hidden=!s; $('#editSongBtn').hidden=!s; $('#wrongBtn').hidden=!s; applyView();
+  if(s){ $('#pick').hidden=true; picking=[]; } $('#emptyStage').hidden=!!s || !$('#pick').hidden; $('#cursorMark').hidden=!s; $('#editSongBtn').hidden=!s; $('#wrongBtn').hidden=!s; applyView();
   if(!s){ $('#secBar').hidden=true; S.sections=[]; $('#keyBox').hidden=true; S.rows=[]; renderSlide(); L.innerHTML=''; $('#songTitle').textContent='Nenhuma música'; $('#songArtist').textContent='Cante ou digite um trecho'; $('#keyLbl').textContent='Tom —'; return; }
   $('#songTitle').textContent=s.title; $('#songArtist').textContent=s.artist+(s.genre?' · '+s.genre:'');
   let parsed, chordsMode=false;
@@ -662,7 +678,7 @@ function renderSong(){
     else if(it.type==='sec') html.push(`<div class="sec">${esc(it.text)}</div>`);
     else if(it.type==='tab') html.push(`<div class="tab">${esc(it.text)}</div>`);
     else if(it.type==='ch') html.push(`<div class="ch" data-i="${i}">${esc(transposeLine(it.text,n,flats))}</div>`);
-    else { S.lyIdx.push(i); S.lyWords.push(words(it.text)); html.push(`<div class="ln" data-i="${i}" data-l="${S.lyIdx.length-1}">${esc(it.text)}</div>`); }
+    else { S.lyIdx.push(i); S.lyWords.push(words(it.text).map(phon)); html.push(`<div class="ln" data-i="${i}" data-l="${S.lyIdx.length-1}">${esc(it.text)}</div>`); }
   });
   if(!S.lyIdx.length) html.push(`<div class="empty" style="text-align:left">A letra desta música não veio da internet. Toque em <b>Colar cifra / editar</b> e cole a letra ou a cifra.</div>`);
   L.innerHTML=html.join('');
@@ -777,7 +793,7 @@ function lineScore(q, lw){
 }
 function follow(){
   if(!S.song || !S.lyIdx.length || prefs.follow!=='voz' || Date.now()<(S.pinUntil||0)) return;
-  const recent=[...S.finals.slice(-2).flatMap(words), ...words(S.interim)].slice(-6);
+  const recent=[...S.finals.slice(-2).flatMap(words), ...words(S.interim)].slice(-6).map(phon);
   if(recent.length<2) return;
   let best=-1, bs=0;
   const from=Math.max(0,S.cur-1), to=Math.min(S.lyWords.length-1, S.cur+10);
@@ -801,26 +817,56 @@ function songContains(song, qw){
   const bg=new Set(bigrams(words((song.lyrics||'')+'\n'+(song.chords||'')))); const qb=bigrams(qw); let h=0; for(const b of qb) if(bg.has(b)) h++; return {h, r: qb.length? h/qb.length:0};
 }
 /* ---------- reconhecer a música: ouvir bastante, conferir, só então abrir ---------- */
-function chunks(W){ const n=W.length, L=8, out=new Set([W.slice(-L).join(' ')]); if(n>=2*L){ const m=Math.floor(n/2); out.add(W.slice(m-L/2,m+L/2).join(' ')); } if(n>=L+4) out.add(W.slice(0,L).join(' ')); return [...out]; }
-function scoreSong(s, WB){ const txt=(s.lyrics||'')+'\n'+(s.chords||''); if(!txt.trim()) return {h:0,r:0}; const bg=s._bg||(s._bg=new Set(bigrams(words(txt)))); let h=0; for(const b of WB) if(bg.has(b)) h++; return {h, r:WB.length? h/WB.length:0}; }
+/* ---- semelhança: compara pelo som das palavras, não pela letra exata ---- */
+const STOP=new Set(('a o e de da do das dos que eu te me se um uma uns umas em no na nos nas pra pro pras pros por com voce vc meu minha teu tua seu sua ao os as mais mas nao sim ja so la ai oh uh ah ê ei hey ye yeah iê ou tu ele ela isso esse essa esta este aqui foi vai ta to tem ser sou era como quando onde quem pois tao muito bem nem the and you to i me my of in it is').split(' '));
+function phon(w){ return w.replace(/ch/g,'x').replace(/lh/g,'li').replace(/nh/g,'n').replace(/h/g,'').replace(/qu/g,'k').replace(/c(?=[ei])/g,'s').replace(/c/g,'k').replace(/sc|ss|z|ç/g,'s').replace(/y/g,'i').replace(/w/g,'v').replace(/(.)\1+/g,'$1').replace(/m$/,'n').replace(/s$/,'').replace(/[aeiou]$/,''); }
+const content = W => W.filter(w=>w.length>=3 && !STOP.has(w));
+function songIndex(s){
+  if(s._fx) return s._fx;
+  const txt=(s.lyrics||'')+'\n'+(s.chords? parsePlainFromChart(s.chords):'');
+  const P=content(words(txt)).map(phon);
+  const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>({l, p:new Set(content(words(l)).map(phon))}));
+  return s._fx={set:new Set(P), pre:new Set(P.filter(x=>x.length>=4).map(x=>x.slice(0,4))), bg:new Set(bigrams(P)), lines};
+}
+function fuzzyScore(s, H, HB){
+  if(!((s.lyrics||'')+(s.chords||'')).trim() || !H.length) return {h:0,r:0,c:0,snippet:''};
+  const ix=songIndex(s); let hits=0;
+  for(const p of H){ if(ix.set.has(p)) hits+=1; else if(p.length>=5 && ix.pre.has(p.slice(0,4))) hits+=.5; }
+  let bh=0; for(const b of HB) if(ix.bg.has(b)) bh++;
+  const r=hits/H.length, c=r*.7 + Math.min(1,bh/8)*.3;
+  let best=null, bs=0; for(const L of ix.lines){ let k=0; for(const p of H) if(L.p.has(p)) k++; if(k>bs){ bs=k; best=L.l; } }
+  return {h:hits+bh, r, c, snippet:best||''};
+}
+function queries(W){
+  const C=content(W), uniq=[...new Set(C)];
+  const key=uniq.slice().sort((a,b)=>b.length-a.length).slice(0,8);
+  const out=new Set();
+  if(key.length>=3){ out.add(key.join(' ')); out.add(key.map(w=>w+'~').join(' ')); }
+  for(let i=0;i<C.length && out.size<7;i+=5){ const w=C.slice(i,i+6); if(w.length>=3) out.add(w.map(x=>x+'~').join(' ')); }
+  out.add(W.slice(-8).join(' '));
+  return [...out].slice(0,8);
+}
 async function rankSongs(W, excluded=new Set()){
-  const WB=bigrams(W); if(WB.length<3) return null;
+  const Hseq=content(W).map(phon); const H=[...new Set(Hseq)]; const HB=bigrams(Hseq);
+  if(H.length<3) return null;
   const ranked=[];
-  for(const s of allSongs()){ if(excluded.has(s.id)) continue; const sc=scoreSong(s,WB); if(sc.h>=2) ranked.push({song:s, hit:{title:s.title, artist:s.artist, genre:s.genre}, ...sc, votes:0}); }
+  for(const s of allSongs()){ if(excluded.has(s.id)) continue; const sc=fuzzyScore(s,H,HB); if(sc.r>=.3) ranked.push({song:s, hit:{title:s.title, artist:s.artist, genre:s.genre}, ...sc, votes:0, local:true}); }
   if(navigator.onLine){
-    S.searching=true; setStatus('Conferindo qual é a música…', S.listening);
+    S.searching=true; setStatus('Procurando músicas parecidas…', S.listening);
     try{
-      const lists=await Promise.all(chunks(W).map(q=>searchByLyric(q).catch(()=>[])));
+      const lists=await Promise.all(queries(W).map(q=>searchByLyric(q).catch(()=>[])));
       const agg=new Map();
-      lists.forEach(l=>l.slice(0,5).forEach((h,i)=>{ const k=songKey(h.title,h.artist); if(excluded.has(k)) return; const a=agg.get(k)||{hit:h, votes:0}; a.votes+=5-i; agg.set(k,a); }));
-      const top=[...agg.values()].sort((a,b)=>b.votes-a.votes).slice(0,6).filter(a=>!ranked.some(r=>r.song.id===songKey(a.hit.title,a.hit.artist)));
+      lists.forEach(l=>l.slice(0,6).forEach((h,i)=>{ const k=songKey(h.title,h.artist); if(excluded.has(k)) return; const a=agg.get(k)||{hit:h, votes:0}; a.votes+=6-i; agg.set(k,a); }));
+      const top=[...agg.values()].sort((a,b)=>b.votes-a.votes).slice(0,8).filter(a=>!ranked.some(r=>r.song.id===songKey(a.hit.title,a.hit.artist)));
       const got=await Promise.all(top.map(a=>songFromHit(a.hit).then(s=>({s,a})).catch(()=>null)));
-      for(const x of got){ if(x) ranked.push({song:x.s, hit:x.a.hit, ...scoreSong(x.s,WB), votes:x.a.votes}); }
+      for(const x of got){ if(x) ranked.push({song:x.s, hit:x.a.hit, ...fuzzyScore(x.s,H,HB), votes:x.a.votes}); }
     }finally{ S.searching=false; }
   }
-  ranked.sort((a,b)=>b.h-a.h || b.votes-a.votes);
+  const maxV=Math.max(1,...ranked.map(r=>r.votes));
+  ranked.forEach(r=>{ r.total = r.c + (r.votes/maxV)*.15 + (r.local? .05:0); });
+  ranked.sort((a,b)=>b.total-a.total);
   const best=ranked[0], second=ranked[1];
-  const confident = !!best && best.h>=4 && best.r>=.18 && (!second || best.h>=second.h*1.5 || best.h-second.h>=3);
+  const confident = !!best && best.r>=.6 && (!second || best.total-second.total>=.15);
   return {ranked, best, confident};
 }
 function resetHunt(keepExcluded){ S.hunt={text:[], start:0, tries:0, nextAt:0, excluded: keepExcluded? S.hunt.excluded : new Set(), ranked: keepExcluded? S.hunt.ranked : []}; }
@@ -829,32 +875,46 @@ function huntTick(){
   const h=S.hunt, need=prefs.waitSec*1000, el=h.start? Date.now()-h.start : 0;
   const info=$('#huntInfo');
   if(!S.listening){ info.textContent=''; return; }
-  info.textContent = !h.start? 'Ouvindo… pode começar a cantar' : S.searching? 'Conferindo qual é a música…' : el<need? `Ouvindo… ${Math.floor(el/1000)} de ${need/1000} segundos` : 'Ainda conferindo, continue cantando…';
-  $('#prog').style.width = h.start? Math.min(100, el/need*100)+'%' : '0';
-  if(h.start && el>=need && words(h.text.join(' ')).length>=10 && Date.now()>=h.nextAt && !S.searching) runHunt();
+  info.textContent = !h.start? 'Ouvindo… pode começar a cantar' : S.searching? 'Procurando músicas parecidas…' : el<need? `Ouvindo… ${Math.floor(el/1000)} de ${need/1000} segundos` : 'Continue cantando, estou procurando…';
+  if($('#pick').hidden) $('#prog').style.width = h.start? Math.min(100, el/need*100)+'%' : '0';
+  if(h.start && el>=need && words(h.text.join(' ')).length>=8 && Date.now()>=h.nextAt && !S.searching) runHunt();
 }
 setInterval(huntTick, 1000);
 async function runHunt(){
-  const h=S.hunt; h.tries++; h.nextAt=Date.now()+8000;
-  let res; try{ res=await rankSongs(words(h.text.join(' ')).slice(-60), h.excluded); }catch(e){ setStatus('Erro na busca: '+e.message, S.listening); return; }
+  const h=S.hunt; h.tries++; h.nextAt=Date.now()+10000;
+  let res; try{ res=await rankSongs(words(h.text.join(' ')).slice(-70), h.excluded); }catch(e){ setStatus('Erro na busca: '+e.message, S.listening); return; }
   if(!res || S.song) return;
   h.ranked=res.ranked;
-  if(res.confident){ const ranked=res.ranked; resetHunt(); S.hunt.ranked=ranked; loadSong(res.best.song,{from:'voice', cands:ranked.slice(1).map(r=>r.hit)}); setStatus('Música encontrada e salva', S.listening); setTimeout(follow,400); return; }
-  if(h.tries>=3 && res.ranked.length){ S.cands=res.ranked.slice(0,4).map(r=>r.hit); renderCands(); setStatus('Não tenho certeza: veja as possíveis em "Não era essa?"', S.listening); }
-  else setStatus('Ainda não tenho certeza, continue cantando…', S.listening);
+  showPicker(res.ranked);
 }
+/* ---- "Qual dessas é?" ---- */
+let picking=[];
+function showPicker(ranked){
+  const list=(ranked||[]).filter(r=>r.r>=.2 || r.votes>0).slice(0,3);
+  if(!list.length){ setStatus('Ainda não achei nada parecido. Continue cantando', S.listening); return; }
+  const ids=list.map(r=>r.song.id).join('|'); if(!$('#pick').hidden && ids===picking.map(r=>r.song.id).join('|')) return;
+  picking=list;
+  $('#pickList').innerHTML=list.map((r,i)=>`<button class="pk" data-i="${i}">
+      <div class="pk-top"><span class="pk-t">${esc(r.song.title)}</span>${i===0?'<span class="pk-b">mais provável</span>':''}</div>
+      <div class="pk-a">${esc(r.song.artist)}${r.local?' · já está nas suas músicas':''}</div>
+      ${r.snippet?`<div class="pk-s">“${esc(r.snippet)}”</div>`:''}
+      <div class="pk-m"><i style="width:${Math.round(Math.min(1,r.r)*100)}%"></i></div>
+    </button>`).join('');
+  $('#pick').hidden=false; $('#emptyStage').hidden=true;
+  setStatus('Qual dessas é? Toque pra abrir', S.listening);
+}
+function hidePicker(){ $('#pick').hidden=true; picking=[]; if(!S.song) $('#emptyStage').hidden=false; }
+$('#pickList').onclick=e=>{ const b=e.target.closest('.pk'); if(!b) return; const r=picking[+b.dataset.i]; const others=picking.filter(x=>x!==r).map(x=>x.hit); const ranked=S.hunt.ranked; hidePicker(); resetHunt(); S.hunt.ranked=ranked; loadSong(r.song,{from:'voice', cands:others}); setStatus(r.song.lyrics?'Música aberta e salva':'Achei o nome, mas não a letra: cole em Ajustes', S.listening); setTimeout(follow,400); };
+$('#pickNone').onclick=()=>{ picking.forEach(r=>S.hunt.excluded.add(r.song.id)); hidePicker(); S.hunt.nextAt=Date.now()+6000; setStatus('Certo. Continue cantando que eu procuro outras', S.listening); };
 /* usado com uma música aberta (troca) ou quando você digita um trecho */
 async function identify(text, {force=false}={}){
-  const W=words(text); if(W.length<4) return;
+  const W=words(text); if(W.length<3) return;
   const now=Date.now(); if(S.searching || (!force && now-S.lastSearchAt<5000)) return; S.lastSearchAt=now;
   const ex=new Set(S.hunt.excluded); if(S.song) ex.add(S.song.id);
   let res; try{ res=await rankSongs(W, ex); }catch(e){ setStatus('Erro na busca: '+e.message, S.listening); return; }
-  const b=res?.best;
-  if(!b || b.h<2){ setStatus('Não achei. Continue cantando ou digite outro trecho', S.listening); return; }
-  if(S.song){ if(res.confident || b.h>=3) offerSwitch(b.song, res.ranked.slice(1).map(r=>r.hit)); return; }
-  resetHunt(); S.hunt.ranked=res.ranked;
-  loadSong(b.song,{from:'voice', cands:res.ranked.slice(1).map(r=>r.hit)});
-  setStatus(res.confident? 'Música encontrada e salva' : 'Achei esta. Se não for, toque em Não é essa', S.listening);
+  if(!res || !res.ranked.length){ setStatus('Não achei. Continue cantando ou digite outro trecho', S.listening); return; }
+  if(S.song){ if(res.confident) offerSwitch(res.best.song, res.ranked.slice(1).map(r=>r.hit)); return; }
+  S.hunt.ranked=res.ranked; showPicker(res.ranked);
 }
 /* botão "Não é essa" */
 function wrongSong(){
@@ -863,9 +923,9 @@ function wrongSong(){
   if(S.countedThisSession.has(s.id)){ s.timesSung=Math.max(0,(s.timesSung||1)-1); S.countedThisSession.delete(s.id); }
   if(!s.timesSung && !(s.chords||'').trim() && Date.now()-(s.addedAt||0)<3600e3) delete db.songs[s.id];
   save();
-  const next=(S.hunt.ranked||[]).find(r=>!S.hunt.excluded.has(r.song.id) && r.h>=3);
+  const rest=(S.hunt.ranked||[]).filter(r=>!S.hunt.excluded.has(r.song.id) && r.song.id!==s.id);
   S.song=null; renderSong();
-  if(next){ loadSong(next.song,{from:'voice', cands:S.hunt.ranked.filter(r=>r!==next && !S.hunt.excluded.has(r.song.id)).map(r=>r.hit)}); setStatus('Abri a próxima mais provável. Se não for, toque de novo em Não é essa', S.listening); return; }
+  if(rest.length){ showPicker(rest); return; }
   const keep=S.hunt.text.slice(); resetHunt(true); S.hunt.text=keep;
   S.hunt.start = keep.length? Date.now()-prefs.waitSec*1000+8000 : 0;
   setStatus(S.listening? 'Certo, vou ouvir mais um pouco. Continue cantando' : 'Ligue o microfone ou digite outro trecho', S.listening);
@@ -1090,7 +1150,7 @@ async function saveEditor(open){
   let s=editing || db.songs[id] || {id, addedAt:Date.now(), timesSung:0, transpose:0};
   if(editing && editing.id!==id){ delete db.songs[editing.id]; s={...editing, id}; }
   Object.assign(s,{title, artist, genre:$('#mGenre').value.trim(), duration:parseDur($('#mDur').value)||s.duration||0, chords:$('#mChords').value, lyrics:$('#mLyrics').value});
-  delete s._bg;
+  delete s._bg; delete s._fx;
   if(s.chords.trim()){ const p=parseChart(s.chords); if(p.key) s.key={pc:p.key.pc, minor:p.key.minor}; }
   if(!s.lyrics.trim() && !s.chords.trim() && navigator.onLine){ $('#mInfo').textContent='Buscando a letra…'; const ly=await fetchLyrics(title,artist); if(ly){ s.lyrics=ly.lyrics; s.synced=ly.synced; s.duration ||= ly.duration; } }
   db.songs[s.id]=s; save(); $('#modal').hidden=true; renderLib(); renderRep();
@@ -1230,7 +1290,7 @@ document.querySelector('nav.tabs').onclick=e=>{ const b=e.target.closest('button
 /* início */
 applyFont(); $('#followMode').value=prefs.follow; setupAuto(); renderSong(); applyView();
 if(!SR){ $('#statusTxt').textContent='Sem reconhecimento de voz aqui (use o Chrome)'; }
-window.__app={S, db, wrongSong, huntTick, identify, onFinal, hooks, parseChart, transposeLine, estimateKey};
+window.__app={S, db, wrongSong, huntTick, rank:(W)=>rankSongs(W), words, identify, onFinal, hooks, parseChart, transposeLine, estimateKey};
 </script>
 </body>
 </html>
