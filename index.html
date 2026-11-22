@@ -172,6 +172,14 @@ body.full .stage{grid-template-columns:minmax(0,1fr)}
 .chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;color:var(--paper)}
 .chip.wrong{border-color:rgba(255,122,138,.5);color:var(--rose)}
 .hunt{font:700 15px/1.3 var(--f-body);color:var(--teal);min-height:20px}
+.secbar{display:flex;gap:8px;overflow-x:auto;padding:0 max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));justify-content:safe center;scrollbar-width:none}
+.secbar::-webkit-scrollbar{display:none}
+.secbtn{flex:0 0 auto;border:1px solid var(--line);background:var(--ink-2);color:var(--muted);border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px}
+.secbtn.k-ch{color:var(--amber);border-color:rgba(246,181,69,.35)}
+.secbtn.k-br{color:var(--teal);border-color:rgba(95,208,192,.35)}
+.secbtn.k-pre{color:var(--amber-2)}
+.secbtn.on{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.secbtn:hover{border-color:var(--muted)}
 .chip:hover,.chip[aria-expanded="true"]{background:var(--ink-3);border-color:var(--muted)}
 .tools-panel{position:absolute;right:max(16px,env(safe-area-inset-right));top:calc(100% - 4px);z-index:30;width:min(360px,calc(100vw - 32px));background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .tp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted);font-weight:700}
@@ -311,6 +319,7 @@ body.full .strip input{display:none}
               <button class="btn ghost" id="offerNo" title="Atalho: tecla X">Continuar nesta</button>
             </div>
           </div>
+          <nav class="secbar" id="secBar" hidden aria-label="Partes da música"></nav>
           <div class="strip">
             <div class="heard" id="heard">Ouvindo: <em>—</em></div>
             <input type="search" id="typeIn" placeholder="Ou digite um trecho da letra e aperte Enter">
@@ -637,7 +646,7 @@ function loadSong(song, {from='manual', cands=null}={}){
 function renderSong(){
   const s=S.song, L=$('#lyrics');
   $('#emptyStage').hidden=!!s; $('#cursorMark').hidden=!s; $('#editSongBtn').hidden=!s; $('#wrongBtn').hidden=!s; applyView();
-  if(!s){ $('#keyBox').hidden=true; S.rows=[]; renderSlide(); L.innerHTML=''; $('#songTitle').textContent='Nenhuma música'; $('#songArtist').textContent='Cante ou digite um trecho'; $('#keyLbl').textContent='Tom —'; return; }
+  if(!s){ $('#secBar').hidden=true; S.sections=[]; $('#keyBox').hidden=true; S.rows=[]; renderSlide(); L.innerHTML=''; $('#songTitle').textContent='Nenhuma música'; $('#songArtist').textContent='Cante ou digite um trecho'; $('#keyLbl').textContent='Tom —'; return; }
   $('#songTitle').textContent=s.title; $('#songArtist').textContent=s.artist+(s.genre?' · '+s.genre:'');
   let parsed, chordsMode=false;
   if(s.chords && s.chords.trim()){ parsed=parseChart(s.chords); chordsMode=parsed.hasChords; s.key=parsed.key? {pc:parsed.key.pc, minor:parsed.key.minor} : s.key; }
@@ -657,8 +666,10 @@ function renderSong(){
   });
   if(!S.lyIdx.length) html.push(`<div class="empty" style="text-align:left">A letra desta música não veio da internet. Toque em <b>Colar cifra / editar</b> e cole a letra ou a cifra.</div>`);
   L.innerHTML=html.join('');
-  let sec=''; S.rows=[];
-  parsed.items.forEach((it,i)=>{ if(it.type==='sec') sec=it.text; if(it.type==='ly'){ const p=parsed.items[i-1]; S.rows.push({ly:it.text, ch:p&&p.type==='ch'? transposeLine(p.text,n,flats).replace(/\s+$/,'') : null, sec}); } });
+  S.rows=[]; S.sections=buildSections(parsed.items);
+  parsed.items.forEach((it,i)=>{ if(it.type==='ly'){ const p=parsed.items[i-1]; S.rows.push({ly:it.text, ch:p&&p.type==='ch'? transposeLine(p.text,n,flats).replace(/\s+$/,'') : null, sec:it._sec||''}); } });
+  S.sections.forEach(x=>{ x.start=Math.min(x.start, Math.max(0,S.rows.length-1)); });
+  renderSecBar();
   $('#slide').classList.toggle('mono', chordsMode);
   L.scrollTop=0; renderSlide(); setCur(S.cur>=0?S.cur:0, false);
   updateVoiceUI();
@@ -681,6 +692,56 @@ function setCur(l, smooth=true){
 $('#lyrics').addEventListener('scroll', ()=>{ const el=$('#lyrics .ln.cur'); if(el) $('#cursorMark').style.top=(el.offsetTop-$('#lyrics').scrollTop)+'px'; });
 $('#lyrics').addEventListener('click', e=>{ const el=e.target.closest('.ln'); if(el) setCur(+el.dataset.l); });
 
+/* ---------- partes da música (início, refrão, ponte…) ---------- */
+function buildSections(items){
+  // 1) corta em blocos: um bloco começa depois de linha em branco ou de um [rótulo]
+  const blocks=[]; let cur=null, pendingLabel=null, row=0;
+  const open=()=>{ cur={label:pendingLabel, lines:[], start:row, idx:[]}; blocks.push(cur); pendingLabel=null; };
+  items.forEach((it,i)=>{
+    if(it.type==='sec'){ pendingLabel=it.text; cur=null; if(/intro|introdu/i.test(it.text)){ open(); } return; }
+    if(it.type==='gap'){ cur=null; return; }
+    if(it.type==='ly'){ if(!cur || pendingLabel) open(); cur.lines.push(it.text); cur.idx.push(i); row++; }
+  });
+  const blk=blocks.filter(b=>b.lines.length || b.label);
+  // 2) acha o refrão: bloco repetido, de preferência com o nome da música
+  const key=b=>norm(b.lines.join(' '));
+  const sim=(a,b)=>{ const A=new Set(bigrams(words(a))), B=bigrams(words(b)); if(!A.size||!B.length) return 0; let h=0; for(const x of B) if(A.has(x)) h++; return h/Math.max(A.size,B.length); };
+  const reps=blk.map((b,i)=>blk.some((c,j)=>j!==i && sim(key(b),key(c))>=.6));
+  const tw=words(S.song?.title||'').filter(w=>w.length>3);
+  let chorus=-1, best=-1;
+  blk.forEach((b,i)=>{ if(!reps[i]||b.label) return; const k=key(b); let sc=blk.filter((c,j)=>sim(k,key(c))>=.6).length; if(tw.length && tw.some(w=>k.includes(w))) sc+=3; if(sc>best){best=sc;chorus=i;} });
+  const isChorusLike=i=> chorus>=0 && sim(key(blk[chorus]),key(blk[i]))>=.6;
+  blk.forEach((b,i)=>{ if(b.label){ b.kind=/refr|chorus/i.test(b.label)?'ch':/ponte|bridge/i.test(b.label)?'br':/intro/i.test(b.label)?'in':'lab'; return; } b.kind = isChorusLike(i)? 'ch' : 'v'; });
+  // continuação do refrão: blocos repetidos logo depois do refrão
+  const twins=i=>blk.map((c,j)=>j!==i && sim(key(blk[i]),key(c))>=.6? j : -1).filter(j=>j>=0);
+  for(let pass=0, changed=true; changed && pass<6; pass++){ changed=false;
+    for(let i=1;i<blk.length;i++){ if(blk[i].label || blk[i].kind!=='v' || !reps[i] || blk[i-1].kind!=='ch') continue;
+      if(twins(i).some(j=>j>0 && blk[j-1].kind==='ch')){ blk[i].kind='ch'; changed=true; } } }
+  // pré-refrão: bloco repetido logo antes do refrão
+  for(let i=0;i<blk.length-1;i++){ if(!blk[i].label && blk[i].kind==='v' && reps[i] && blk[i+1].kind==='ch') blk[i].kind='pre'; }
+  const chIdx=blk.map((b,i)=>b.kind==='ch'?i:-1).filter(i=>i>=0);
+  blk.forEach((b,i)=>{ if(b.kind!=='v') return; if(!reps[i] && chIdx.length>=2 && i>chIdx[0] && i<chIdx[chIdx.length-1] && blk.slice(0,i).filter(x=>x.kind==='ch').length>=2) b.kind='br'; else if(!reps[i] && chIdx.length && i>chIdx[chIdx.length-1]) b.kind='fin'; });
+  // junta blocos vizinhos do mesmo tipo (sem rótulo da cifra)
+  const merged=[];
+  for(const b of blk){ const last=merged[merged.length-1]; if(last && !b.label && !last.label && last.kind===b.kind){ last.lines.push(...b.lines); last.idx.push(...b.idx); } else merged.push(b); }
+  let part=0;
+  merged.forEach(b=>{ if(b.label) return; b.label = b.kind==='ch'?'Refrão' : b.kind==='pre'?'Pré-refrão' : b.kind==='br'?'Ponte' : b.kind==='fin'?'Final' : (part++===0 && b===merged.find(x=>!x.label||x.kind==='v')? 'Início' : 'Parte '+(part)); });
+  if(merged[0] && merged[0].kind==='v' && !/intro/i.test(merged[0].label)) merged[0].label = merged[0].label.startsWith('Parte')? 'Início' : merged[0].label;
+  blk.length=0; blk.push(...merged);
+  // marca cada linha com o nome da parte
+  blk.forEach(b=>b.idx.forEach(i=>{ items[i]._sec=b.label; }));
+  return blk.map(b=>({label:b.label, kind:{ch:'ch',br:'br',pre:'pre'}[b.kind]||'v', start:b.start}));
+}
+function curSection(){ let k=-1; (S.sections||[]).forEach((x,i)=>{ if(x.start<=S.cur) k=i; }); return k; }
+function renderSecBar(){
+  const bar=$('#secBar'); const secs=S.sections||[];
+  bar.hidden=!S.song || secs.length<2;
+  bar.innerHTML=secs.map((x,i)=>`<button class="secbtn k-${x.kind}" data-i="${i}">${esc(x.label)}</button>`).join('');
+  markSecBar();
+}
+function markSecBar(){ const k=curSection(); document.querySelectorAll('#secBar .secbtn').forEach((b,i)=>{ const on=i===k; b.classList.toggle('on',on); if(on && b.scrollIntoView){ const bar=$('#secBar'); const l=b.offsetLeft-bar.clientWidth/2+b.clientWidth/2; bar.scrollTo({left:l,behavior:'smooth'}); } }); }
+$('#secBar').onclick=e=>{ const b=e.target.closest('.secbtn'); if(!b) return; const x=S.sections[+b.dataset.i]; S.pinUntil=Date.now()+6000; setCur(x.start); };
+
 /* ---------- quadro de 3 frases ---------- */
 function renderSlide(dir=0){
   const B=$('#slideBody'); const s=S.song;
@@ -694,6 +755,7 @@ function renderSlide(dir=0){
     return `<div class="sr ${cls}"${op}>${r.ch?`<div class="c">${esc(r.ch)}</div>`:''}<div class="l">${esc(r.ly)}</div></div>`; }).join('');
   $('#slSec').textContent=S.rows[c].sec||''; $('#slCount').textContent=`${c+1} / ${S.rows.length}`;
   $('#prog').style.width=((c+1)/S.rows.length*100)+'%';
+  markSecBar();
   if(dir){ B.classList.remove('enter','back'); void B.offsetWidth; B.classList.add(dir>0?'enter':'back'); }
 }
 $('#slideBody').addEventListener('click', e=>{ if(!S.song) return; const r=$('#slideBody').getBoundingClientRect(); setCur(S.cur + (e.clientX < r.left + r.width*0.3 ? -1 : 1)); });
@@ -714,7 +776,7 @@ function lineScore(q, lw){
   return s;
 }
 function follow(){
-  if(!S.song || !S.lyIdx.length || prefs.follow!=='voz') return;
+  if(!S.song || !S.lyIdx.length || prefs.follow!=='voz' || Date.now()<(S.pinUntil||0)) return;
   const recent=[...S.finals.slice(-2).flatMap(words), ...words(S.interim)].slice(-6);
   if(recent.length<2) return;
   let best=-1, bs=0;
