@@ -195,6 +195,15 @@ body.full .stage{grid-template-columns:minmax(0,1fr)}
 .sr.r2 .l{font:400 min(calc(var(--lyr)*.8),4.8vw)/1.2 var(--f-body);color:var(--dim)}
 .sr.r1 .c,.sr.r2 .c{color:rgba(246,181,69,.55);font-size:calc(var(--lyr)*.5)}
 .slide:not(.mono) .sr{text-align:center}
+.slide.dense .slide-body{gap:clamp(4px,1.1vh,12px)}
+.slide.dense .sr .l{font:400 min(calc(var(--lyr)*.78),5.2vw)/1.22 var(--f-body);color:var(--muted)}
+.slide.dense .sr.rp .l{color:var(--dim);font-size:min(calc(var(--lyr)*.66),4.4vw)}
+.slide.dense .sr.r0{background:rgba(246,181,69,.08);border-radius:12px;padding:4px 14px;box-shadow:inset 3px 0 0 var(--amber)}
+.slide.dense .sr.r0 .l{font-weight:700;font-size:min(calc(var(--lyr)*.98),6.2vw);color:var(--paper)}
+.slide.dense .sr .c{font-size:calc(var(--lyr)*.48);color:rgba(246,181,69,.7)}
+.slide.dense .sr.r0 .c{font-size:calc(var(--lyr)*.6);color:var(--amber)}
+.slide.dense.mono .sr .l{font-size:min(calc(var(--lyr)*.62),3.9vw)}
+.slide.dense.mono .sr.r0 .l{font-size:min(calc(var(--lyr)*.74),4.6vw)}
 .slide.mono .sr .l{font-family:var(--f-mono);white-space:pre}
 .slide.mono .sr.r0 .l{font-size:min(calc(var(--lyr)*1.0),6vw)}
 .slide.mono .sr.r1 .l{font-size:min(calc(var(--lyr)*.72),4.4vw)}
@@ -264,7 +273,7 @@ body.full .strip input{display:none}
             </div>
             <div class="tools-panel" id="toolsPanel" hidden>
               <div class="tp-row"><span>Mostrar</span>
-                <div class="seg" id="viewSeg"><button data-v="slide">3 frases</button><button data-v="full">Letra inteira</button></div></div>
+                <div class="seg" id="viewSeg"><button data-v="slide" data-n="3">3 frases</button><button data-v="slide" data-n="6">6 frases</button><button data-v="full">Inteira</button></div></div>
               <div class="tp-row"><span>Tamanho da letra</span>
                 <div class="seg"><button id="fontDown" aria-label="Diminuir letra">A−</button><button id="fontUp" aria-label="Aumentar letra">A+</button></div></div>
               <div class="tp-row"><span>A letra anda</span>
@@ -456,7 +465,7 @@ const songKey = (title, artist) => norm(title)+'|'+norm(artist);
 const LS='letraNoPalco.v1';
 let db = (()=>{ try{ return JSON.parse(localStorage.getItem(LS)) || null; }catch{ return null; } })() || {};
 db.songs ||= {}; db.setlists ||= []; db.prefs ||= {};
-const prefs = Object.assign({waitSec:20, view:'slide', font:34, lang:'pt-BR', autoSpeed:16, autoSwitch:true, follow:'voz', pdf:{}}, db.prefs);
+const prefs = Object.assign({lines:6, waitSec:20, view:'slide', font:34, lang:'pt-BR', autoSpeed:16, autoSwitch:true, follow:'voz', pdf:{}}, db.prefs);
 db.prefs = prefs;
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem(LS, JSON.stringify(db)); }catch(e){ toast('Não consegui salvar no aparelho: '+e.message, 5000); } }, 200); }
@@ -677,7 +686,12 @@ function renderSlide(dir=0){
   const B=$('#slideBody'); const s=S.song;
   if(!s || !S.rows?.length){ B.innerHTML = s? '<div class="sr r1"><div class="l">A letra não veio da internet. Abra <b>Ajustes → Colar cifra / editar</b> e cole a letra.</div></div>' : ''; $('#slSec').textContent=''; $('#slCount').textContent=''; $('#prog').style.width='0'; return; }
   const c=Math.max(0,S.cur);
-  B.innerHTML=[0,1,2].map(k=>{ const r=S.rows[c+k]; if(!r) return ''; return `<div class="sr r${k}">${r.ch?`<div class="c">${esc(r.ch)}</div>`:''}<div class="l">${esc(r.ly)}</div></div>`; }).join('');
+  const n=prefs.lines||6, before=n>=6?1:0; $('#slide').classList.toggle('dense', n>3);
+  const ks=[]; for(let k=-before;k<n-before;k++) ks.push(k);
+  B.innerHTML=ks.map(k=>{ const r=S.rows[c+k]; if(!r) return k<0? '<div class="sr rp"><div class="l">&nbsp;</div></div>' : '';
+    const cls = k<0? 'rp' : k===0? 'r0' : (n>3? 'rn' : 'r'+k);
+    const op = n>3 && k>0? ` style="opacity:${Math.max(.45, 1-k*.13)}"` : '';
+    return `<div class="sr ${cls}"${op}>${r.ch?`<div class="c">${esc(r.ch)}</div>`:''}<div class="l">${esc(r.ly)}</div></div>`; }).join('');
   $('#slSec').textContent=S.rows[c].sec||''; $('#slCount').textContent=`${c+1} / ${S.rows.length}`;
   $('#prog').style.width=((c+1)/S.rows.length*100)+'%';
   if(dir){ B.classList.remove('enter','back'); void B.offsetWidth; B.classList.add(dir>0?'enter':'back'); }
@@ -686,9 +700,9 @@ $('#slideBody').addEventListener('click', e=>{ if(!S.song) return; const r=$('#s
 function applyView(){
   const full=prefs.view==='full';
   $('#slide').hidden=full; $('#fullWrap').hidden=!full;
-  document.querySelectorAll('#viewSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===(prefs.view||'slide')));
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===(prefs.view||'slide') && (b.dataset.v==='full' || +b.dataset.n===(prefs.lines||6))));
 }
-$('#viewSeg').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; prefs.view=b.dataset.v; save(); applyView(); setCur(S.cur,false); };
+$('#viewSeg').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; prefs.view=b.dataset.v; if(b.dataset.n) prefs.lines=+b.dataset.n; save(); applyView(); renderSlide(); setCur(S.cur,false); };
 $('#toolsBtn').onclick=e=>{ e.stopPropagation(); const p=$('#toolsPanel'); p.hidden=!p.hidden; $('#toolsBtn').setAttribute('aria-expanded', !p.hidden); };
 document.addEventListener('click', e=>{ if(!e.target.closest('#toolsPanel,#toolsBtn')){ $('#toolsPanel').hidden=true; $('#toolsBtn').setAttribute('aria-expanded','false'); } });
 
