@@ -339,13 +339,13 @@ body.full .strip input{display:none}
               <div class="empty-stage" id="emptyStage">
                 <div class="es-mic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
                 <h2>Comece a cantar</h2>
-                <p>Toque em <b>Começar a ouvir</b> e cante à vontade.<br>Depois de uns 20 segundos aparecem as músicas mais parecidas pra você escolher.</p>
+                <p>Toque em <b>Começar a ouvir</b> e cante.<br>Com umas 8 palavras ele já procura na internet e mostra as músicas pra você escolher.</p>
                 <div class="hunt" id="huntInfo" aria-live="polite"></div>
               </div>
               <div class="pick" id="pick" hidden>
                 <div class="pk-ey">Qual dessas é?</div>
                 <div class="pk-list" id="pickList"></div>
-                <button class="btn ghost small" id="pickNone">Nenhuma dessas · continuar ouvindo</button>
+                <div class="row" style="justify-content:center"><button class="btn ghost small" id="pickNone">Nenhuma dessas · continuar ouvindo</button><a class="btn ghost small" id="pickGoogle" target="_blank" rel="noopener">Procurar no Google</a></div>
               </div>
               <div class="progress" aria-hidden="true"><i id="prog"></i></div>
             </div>
@@ -363,7 +363,7 @@ body.full .strip input{display:none}
           <nav class="secbar" id="secBar" hidden aria-label="Partes da música"></nav>
           <div class="strip">
             <div class="heard" id="heard">Ouvindo: <em>—</em></div>
-            <input type="search" id="typeIn" placeholder="Ou digite um trecho da letra e aperte Enter">
+            <input type="search" id="typeIn" placeholder="Ou digite um trecho ou o nome da música e aperte Enter">
           </div>
         </div>
         <aside class="side" id="side">
@@ -448,7 +448,7 @@ body.full .strip input{display:none}
           <label class="f">Idioma que você canta
             <select id="langSel"><option value="pt-BR">Português (Brasil)</option><option value="en-US">Inglês</option><option value="es-ES">Espanhol</option></select>
           </label>
-          <label class="f">Quanto tempo ouvir antes de buscar a música
+          <label class="f" style="display:none">Quanto tempo ouvir antes de buscar a música
             <select id="waitSel"><option value="8">8 segundos</option><option value="12">12 segundos</option><option value="20">20 segundos</option><option value="30">30 segundos</option></select>
           </label>
           <label class="row small"><input type="checkbox" class="chk" id="pitchChk"> Detectar o tom da minha voz (no Safari pode atrapalhar o microfone)</label>
@@ -469,6 +469,7 @@ body.full .strip input{display:none}
         <div class="panel">
           <h3>Diagnóstico</h3>
           <p class="small muted" style="margin:0">Se algo der errado, o motivo aparece aqui. Pode mandar print disso pra gente ajustar.</p>
+          <div class="row"><button class="btn small" id="testBtn">Testar a busca agora</button><button class="btn small ghost" id="diagClear">Limpar</button></div>
           <pre class="diag" id="diagLog">Nenhum problema registrado.</pre>
         </div>
         <div class="panel">
@@ -506,7 +507,7 @@ body.full .strip input{display:none}
 <script>
 "use strict";
 const IS_SAFARI=/^((?!chrome|chromium|android|crios|edg).)*safari/i.test(navigator.userAgent);
-const DIAG=[]; function diag(m){ DIAG.push(new Date().toLocaleTimeString('pt-BR')+' '+m); if(DIAG.length>40) DIAG.shift(); const el=document.getElementById('diagLog'); if(el) el.textContent=DIAG.slice().reverse().join('\n'); }
+const DIAG=(()=>{ try{ return JSON.parse(localStorage.getItem('letraNoPalco.diag'))||[]; }catch{ return []; } })(); function diag(m){ DIAG.push(new Date().toLocaleTimeString('pt-BR')+' '+m); if(DIAG.length>40) DIAG.shift(); try{ localStorage.setItem('letraNoPalco.diag', JSON.stringify(DIAG)); }catch{} const el=document.getElementById('diagLog'); if(el) el.textContent=DIAG.slice().reverse().join('\n'); }
 window.addEventListener('error', e=>diag('erro: '+(e.message||e.type)));
 window.addEventListener('unhandledrejection', e=>{ diag('falha: '+(e.reason?.message||e.reason)); e.preventDefault(); });
 /* ================= utilidades ================= */
@@ -903,7 +904,9 @@ async function rankSongs(W, excluded=new Set()){
   if(navigator.onLine){
     S.searching=true; setStatus('Procurando músicas parecidas…', S.listening);
     try{
-      const lists=await Promise.all(queries(W).map(q=>searchByLyric(q).catch(()=>[])));
+      let fails=0; const qs=queries(W);
+      const lists=await Promise.all(qs.map(q=>searchByLyric(q).catch(e=>{ fails++; diag('letras.mus.br: '+e.message); return []; })));
+      if(fails===qs.length) setStatus('O site de busca de letras não respondeu. Tentando de novo…', S.listening);
       const agg=new Map();
       lists.forEach(l=>l.slice(0,6).forEach((h,i)=>{ const k=songKey(h.title,h.artist); if(excluded.has(k)) return; const a=agg.get(k)||{hit:h, votes:0}; a.votes+=6-i; agg.set(k,a); }));
       const top=[...agg.values()].sort((a,b)=>b.votes-a.votes).slice(0,8).filter(a=>!ranked.some(r=>r.song.id===songKey(a.hit.title,a.hit.artist)));
@@ -918,20 +921,23 @@ async function rankSongs(W, excluded=new Set()){
   const confident = !!best && best.r>=.6 && (!second || best.total-second.total>=.15);
   return {ranked, best, confident};
 }
-function resetHunt(keepExcluded){ S.hunt={text:[], start:0, tries:0, nextAt:0, excluded: keepExcluded? S.hunt.excluded : new Set(), ranked: keepExcluded? S.hunt.ranked : []}; }
+function resetHunt(keepExcluded){ S.interim=''; S.hunt={lastN:0, text:[], start:0, tries:0, nextAt:0, excluded: keepExcluded? S.hunt.excluded : new Set(), ranked: keepExcluded? S.hunt.ranked : []}; }
+function huntWords(){ return words([...S.hunt.text, S.interim||''].join(' ')); }
 function huntTick(){
   if(S.song){ return; }
-  const h=S.hunt, need=prefs.waitSec*1000, el=h.start? Date.now()-h.start : 0;
-  const info=$('#huntInfo');
-  if(!S.listening){ info.textContent=''; return; }
-  info.textContent = !h.start? 'Ouvindo… pode começar a cantar' : S.searching? 'Procurando músicas parecidas…' : el<need? `Ouvindo… ${Math.floor(el/1000)} de ${need/1000} segundos` : 'Continue cantando, estou procurando…';
-  if($('#pick').hidden) $('#prog').style.width = h.start? Math.min(100, el/need*100)+'%' : '0';
-  if(h.start && el>=need && words(h.text.join(' ')).length>=8 && Date.now()>=h.nextAt && !S.searching) runHunt();
+  const h=S.hunt, info=$('#huntInfo');
+  if(!S.listening && !h.text.length){ info.textContent=''; return; }
+  const n=huntWords().length, need=8;
+  if(n && !h.start) h.start=Date.now();
+  info.textContent = !n? 'Ouvindo… pode começar a cantar' : S.searching? 'Procurando na internet…' : n<need? `Ouvi ${n} de ${need} palavras…` : 'Continue cantando, vou refinando as opções…';
+  if($('#pick').hidden) $('#prog').style.width = Math.min(100, n/need*100)+'%';
+  // busca assim que tiver 8 palavras; depois refina a cada 5 palavras novas
+  if(n>=need && !S.searching && n>=(h.lastN||0)+5 && Date.now()>=(h.nextAt||0)) { h.lastN=n; runHunt(); }
 }
 setInterval(huntTick, 1000);
 async function runHunt(){
-  const h=S.hunt; h.tries++; h.nextAt=Date.now()+10000;
-  let res; try{ res=await rankSongs(words(h.text.join(' ')).slice(-70), h.excluded); }catch(e){ { diag('busca: '+e.message); setStatus(navigator.onLine? 'A busca falhou, tentando de novo…' : 'Sem internet: procuro só nas suas músicas', S.listening); } return; }
+  const h=S.hunt; h.tries++; h.nextAt=Date.now()+3000;
+  let res; try{ res=await rankSongs(huntWords().slice(-70), h.excluded); }catch(e){ { diag('busca: '+e.message); setStatus(navigator.onLine? 'A busca falhou, tentando de novo…' : 'Sem internet: procuro só nas suas músicas', S.listening); } return; }
   if(!res || S.song) return;
   h.ranked=res.ranked;
   showPicker(res.ranked);
@@ -949,12 +955,13 @@ function showPicker(ranked){
       ${r.snippet?`<div class="pk-s">“${esc(r.snippet)}”</div>`:''}
       <div class="pk-m"><i style="width:${Math.round(Math.min(1,r.r)*100)}%"></i></div>
     </button>`).join('');
+  $('#pickGoogle').href='https://www.google.com/search?q='+encodeURIComponent('"'+huntWords().slice(-10).join(' ')+'" letra');
   $('#pick').hidden=false; $('#emptyStage').hidden=true;
   setStatus('Qual dessas é? Toque pra abrir', S.listening);
 }
 function hidePicker(){ $('#pick').hidden=true; picking=[]; if(!S.song) $('#emptyStage').hidden=false; }
 $('#pickList').onclick=e=>{ const b=e.target.closest('.pk'); if(!b) return; const r=picking[+b.dataset.i]; const others=picking.filter(x=>x!==r).map(x=>x.hit); const ranked=S.hunt.ranked; hidePicker(); resetHunt(); S.hunt.ranked=ranked; loadSong(r.song,{from:'voice', cands:others}); setStatus(r.song.lyrics?'Música aberta e salva':'Achei o nome, mas não a letra: cole em Ajustes', S.listening); setTimeout(follow,400); };
-$('#pickNone').onclick=()=>{ picking.forEach(r=>S.hunt.excluded.add(r.song.id)); hidePicker(); S.hunt.nextAt=Date.now()+6000; setStatus('Certo. Continue cantando que eu procuro outras', S.listening); };
+$('#pickNone').onclick=()=>{ picking.forEach(r=>S.hunt.excluded.add(r.song.id)); hidePicker(); S.hunt.nextAt=Date.now()+3000; S.hunt.lastN=Math.max(0,huntWords().length-5); setStatus('Certo. Continue cantando que eu procuro outras', S.listening); };
 /* usado com uma música aberta (troca) ou quando você digita um trecho */
 async function identify(text, {force=false}={}){
   const W=words(text); if(W.length<3) return;
@@ -976,7 +983,7 @@ function wrongSong(){
   S.song=null; renderSong();
   if(rest.length){ showPicker(rest); return; }
   const keep=S.hunt.text.slice(); resetHunt(true); S.hunt.text=keep;
-  S.hunt.start = keep.length? Date.now()-prefs.waitSec*1000+8000 : 0;
+  S.hunt.lastN=0;
   setStatus(S.listening? 'Certo, vou ouvir mais um pouco. Continue cantando' : 'Ligue o microfone ou digite outro trecho', S.listening);
 }
 function onFinal(t){
@@ -992,7 +999,7 @@ function onFinal(t){
   }
   follow();
 }
-function onInterim(t){ S.interim=t; showHeard(); follow(); }
+function onInterim(t){ S.interim=t; showHeard(); if(!S.song) huntTick(); follow(); }
 function showHeard(){ const f=S.finals.slice(-2).join(' '); $('#heard').innerHTML='Ouvindo: '+esc(f.slice(-90))+' <em>'+esc(S.interim)+'</em>'; }
 
 /* ---------- aviso de troca (nunca troca sozinho) ---------- */
@@ -1119,7 +1126,7 @@ $('#typeIn').addEventListener('keydown', e=>{ if(e.key==='Enter'){ const t=e.tar
 function newSong(){
   hideOffer(); hidePicker(); resetHunt(); S.song=null; S.finals=[]; S.interim=''; S.cands=[]; renderCands(); renderSong(); showHeard();
   $('#toolsPanel').hidden=true;
-  if(!S.listening) startListening();
+  if(!S.listening) startListening(); else { try{ S.rec?.stop(); }catch{} } /* recomeça a transcrição do zero */
   setStatus('Pode cantar a próxima música', true);
 }
 $('#newSongBtn').onclick=newSong; $('#newSongTop').onclick=newSong;
@@ -1357,6 +1364,20 @@ function showTab(t){
   if(t==='palco') setTimeout(()=>setCur(S.cur,false),50);
 }
 document.querySelector('nav.tabs').onclick=e=>{ const b=e.target.closest('button'); if(b) showTab(b.dataset.tab); };
+
+/* diagnóstico */
+if(DIAG.length) $('#diagLog').textContent=DIAG.slice().reverse().join('\n');
+$('#diagClear').onclick=()=>{ DIAG.length=0; try{ localStorage.removeItem('letraNoPalco.diag'); }catch{} $('#diagLog').textContent='Nenhum problema registrado.'; };
+$('#testBtn').onclick=async()=>{
+  const L=$('#diagLog'); L.textContent='Testando…';
+  const lines=[`Navegador: ${IS_SAFARI?'Safari':'Chrome/outro'} · reconhecimento de voz: ${SR?'sim':'não'} · internet: ${navigator.onLine?'sim':'não'}`];
+  const t=async(nome,fn)=>{ const t0=Date.now(); try{ const r=await fn(); lines.push(`✓ ${nome} (${Date.now()-t0} ms) ${r}`); }catch(e){ lines.push(`✗ ${nome}: ${e.message}`); } L.textContent=lines.join('\n'); };
+  await t('Busca por trecho (Letras.mus.br)', async()=>{ const h=await searchByLyric('quando eu digo que deixei de te amar'); if(!h.length) throw new Error('sem resultado'); return '→ '+h[0].title; });
+  await t('Busca parecida', async()=>{ const h=await searchByLyric('deixei~ amar~ coracao~'); return h.length+' resultados'; });
+  await t('Letras (LRCLIB)', async()=>{ const r=await fetchLyricsRaw('Evidências','Chitãozinho & Xororó'); if(!r) throw new Error('não veio'); return r.lyrics.length+' caracteres'; });
+  await t('Sugestões (Deezer)', async()=>{ const r=await jsonp('https://api.deezer.com/search/artist?limit=1&q=xororo'); return (r.data||[]).length+' artista'; });
+  lines.push('', ...DIAG.slice().reverse()); L.textContent=lines.join('\n');
+};
 
 /* início */
 applyFont(); $('#followMode').value=prefs.follow; setupAuto(); renderSong(); applyView();
