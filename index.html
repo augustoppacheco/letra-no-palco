@@ -63,6 +63,9 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--mu
 @keyframes pulse{50%{opacity:.25}}
 .key{font:700 13px/1 var(--f-mono);padding:5px 8px;border-radius:7px;background:rgba(246,181,69,.12);color:var(--amber);white-space:nowrap}
 .key.guess{background:rgba(154,147,179,.14);color:var(--muted)}
+.trbox{display:inline-flex;align-items:center;gap:4px}
+.trb{background:var(--ink-3);border:1px solid var(--line);border-radius:8px;width:32px;height:30px;font-weight:800;color:var(--paper);padding:0}
+.trb:hover{border-color:var(--amber)}
 .key.none{background:rgba(255,122,138,.12);color:var(--rose)}
 .muted{color:var(--muted)} .dim{color:var(--dim)} .small{font-size:13px}
 .status{font-size:14px;color:var(--muted);min-height:20px}
@@ -262,12 +265,12 @@ a{color:var(--amber)}
       <button class="btn small" id="fillBtn" title="Busca na internet a letra das músicas que estão sem letra">↻ Buscar letras que faltam</button>
       <button class="btn small" id="newSongBtn">+ Música</button>
     </div>
-    <div class="row small">
+    <div class="row small" hidden>
       <button class="btn small primary" id="origGo">🎵 Pôr todas no tom original</button>
       <span class="dim">O Claude diz o tom da gravação original de cada música; a cifra é transposta junto.</span>
     </div>
     <div class="status" id="origStatus"></div>
-    <div class="row small">
+    <div class="row small" hidden>
       <span class="muted">Ou colocar todas no tom</span>
       <select id="allKey" style="width:auto;padding:5px 8px"></select>
       <button class="btn small" id="allKeyGo">Aplicar em todas</button>
@@ -312,7 +315,7 @@ a{color:var(--amber)}
     </div>
     <div class="st-top" id="stTop" hidden>
       <div class="st-title"><div class="m" id="stMed"></div><div class="t" id="stSong"></div><div class="a" id="stArtist"></div></div>
-      <span class="key" id="stKey"></span>
+      <span class="trbox"><button class="trb" id="trDown" title="Descer meio tom">−</button><span class="key" id="stKey"></span><button class="trb" id="trUp" title="Subir meio tom">+</button></span>
       <button class="mic" id="micBtn"><span class="dot"></span><span id="micLbl">Seguir minha voz</span></button>
       <button class="btn icon" id="listBtn" title="Lista do show">☰</button>
       <button class="btn icon" id="fsBtn" title="Tela cheia">⛶</button>
@@ -393,7 +396,8 @@ a{color:var(--amber)}
     <label class="f">Artista <input type="text" id="edArtist"></label>
   </div>
   <div class="row">
-    <label class="f" style="width:130px">Tom <select id="edKey"></select></label>
+    <label class="f" style="width:130px">Tom original <select id="edKey"></select></label>
+    <div class="f" style="font-size:13px;color:var(--muted);font-weight:700">Eu toco em<div class="trbox" style="margin-top:6px"><button type="button" class="trb" id="edTrDown">−</button><span class="key" id="edTrLbl">—</span><button type="button" class="trb" id="edTrUp">+</button></div></div>
     <label class="f" style="width:150px">Ritmo <select id="edEnergy"><option value="lenta">Lenta</option><option value="media">Média</option><option value="animada">Animada</option></select></label>
     <span class="spacer"></span>
     <button type="button" class="btn small" id="edFetch">↻ Buscar letra</button>
@@ -437,6 +441,14 @@ const prefs = Object.assign({font:34, lines:6, autoNext:false, showChords:true, 
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem(LS, JSON.stringify(db)); }catch(e){ toast('Não consegui salvar no aparelho: '+e.message, 5000); } }, 150); }
 const allSongs = () => Object.values(db.songs).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+const SEED_V=1, SEED=[["A Ele a Glória","Gabriela Rocha","Ebm","media"],["A Tua Palavra Escondi","Josué Barbosa Lira","","lenta"],["Acende Outra Vez","Jefferson & Suellen","Ebm","animada"],["Aclame ao Senhor","Diante do Trono","A","animada"],["Além do Impossível","Felipe Rodrigues","Db","media"],["Ao Único","Aline Barros","C","media"],["Aonde Está Deus?","Eli Soares","D","media"],["Até Que o Senhor Venha","Ministério Zoe","C#m","animada"],["Aviva-nos / A Terra Clama","Davi Fernandes","","animada"],["Cadeias Quebrar","Soraya Moraes","F#m","animada"],["Canção Que Não Envelhece","Julliany Souza","Fm","media"],["Com Muito Louvor","Cassiane","Bb","animada"],["Consagração","Aline Barros","A","lenta"],["Creio Que Tu És a Cura","Gabriela Rocha","F#","media"],["Cristo","Som Do Reino, Alessandro Vilas Boas, Os Bravos","G","lenta"],["Deixa o Céu Descer","Cassiane","C","media"],["Deus dos Deuses","Lauriete","Eb","animada"],["Digno É o Senhor","Aline Barros","E","media"],["Doce Presença","Sérgio Saas","A","lenta"],["É Demais","Elaine de Jesus","C","animada"],["É Tudo Sobre Você","MORADA","Am","lenta"],["Em Teus Braços","Laura Souguellis","C","lenta"],["Emaús","MORADA","B","media"],["Era Eu","Casa Worship","Fm","lenta"],["Escape","Renascer Praise","D","animada"],["Espírito Santo Ore Por Mim","Comunidade Cristã De Vilhena","","lenta"],["Eu Me Rendo","Renascer Praise","B","lenta"],["Eu Só Quero Tua Presença","Theo Rubia","G","lenta"],["Eu Tenho Você","Marcelo Markes","Bb","lenta"],["Eu Vou Construir","Juliano Son","A","media"],["Fiel é Quem Te Prometeu","Matheus Trindade","","media"],["Fogo em Teus Olhos","Anna Clara Rocha","Em","media"],["Gratidão","fhop music","D","lenta"],["Hino da Vitória","Cassiane","F","animada"],["Jeová Jireh","Aline Barros","G","media"],["Jó","Midian Lima","G","media"],["Lindo Momento","Julliany Souza","E","lenta"],["Me Ama","Gabriela Rocha","A","lenta"],["Me Atraiu","Gabriela Rocha","G","lenta"],["Messias","Marcelo Markes","B","media"],["Meu Barquinho","Giselli Cristina","G","media"],["Na Terra Como no Céu","Michelle Nascimento","G","media"],["Nada Além do Sangue","Fernandinho","Bb","media"],["Nada Mais","Gabriel Guedes","C","lenta"],["O Escudo","Voz da Verdade","D","animada"],["O Fogo Arderá","Alexsander Lúcio","C","animada"],["O Motivo do Louvor","Adhemar de Campos","C","animada"],["O Nome de Jesus","Midian Lima","Db","media"],["O Que Sua Glória Fez Comigo","Fernanda Brum","Dm","lenta"],["Oferta Agradável a Ti","Cassiane","Eb","lenta"],["Oh, Quão Lindo Esse Nome É","Ana Nóbrega","D","lenta"],["Ousado Amor","Isaías Saad","F#","media"],["Pra Sempre","Fernandinho","C","media"],["Preciso de Ti","Diante do Trono","A","lenta"],["Primeira Essência","Aline Barros","Bbm","lenta"],["Primeiro Amor","Aline Barros","A","lenta"],["Quão Grande É o Meu Deus","Soraya Moraes","G","media"],["Que Se Abram Os Céus","Nívea Soares","A","media"],["Quem É Esse?","Julliany Souza","F#","media"],["Quero Ser Como Criança","Roberto Marinho","","lenta"],["Redentor","Marcelo Markes","G","lenta"],["Refúgio","Emaus Music","Bb","lenta"],["Renova-me","Aline Barros","D","lenta"],["Respirar","Diante do Trono, Ana Paula Valadão","Bb","lenta"],["Ressuscita-me","Aline Barros","D","lenta"],["Rude Cruz","Fernandinho","A","lenta"],["Ruja o Leão","Isaías Saad","C#m","animada"],["Santo Espírito","Laura Souguellis","E","lenta"],["Sem Limites","Aline Barros","F#","animada"],["Senhor e Rei","Davi Sacer","A","media"],["Sinto Fluir","Marcelo Markes","B","lenta"],["Só Tu És Santo","MORADA","A","lenta"],["Te Exaltamos","Emaús Music","","media"],["Te Louvamos","Vanilda Bordieri","F","media"],["Teu É o Reino","Prisma Brasil","","media"],["Teus Olhos Revelam","Jozyanne","D","lenta"],["The Lord Will Provide","Passion","B","media"],["Toda Terra","Gabriela Rocha","E","media"],["Tua Palavra","Aline Barros","F#m","lenta"],["Tudo É Perda","Felipe Rodrigues","Db","lenta"],["Um Novo Dia","Get Worship","F#","media"],["Uma Carta Viva","Get Worship","D","lenta"],["Uma Vez","Fhop Music","D","lenta"],["Vem Me Buscar","Jefferson & Suellen","Ebm","media"],["Vitorioso És","Gabriel Guedes","F","animada"],["Voltemos Ao Início","Laura Souguellis","D","lenta"]];
+function applySeed(){
+  if((db.seedV||0)>=SEED_V) return; let n=0;
+  for(const [title,artist,key,energy] of SEED){ const id=songKey(title,artist); const k=keyParse(key);
+    if(!db.songs[id]){ db.songs[id]={id,title,artist,key:k,keySrc:k?'original':'',energy,text:'',textSrc:'',addedAt:Date.now()}; n++; }
+    else if(!db.songs[id].key && k){ db.songs[id].key=k; db.songs[id].keySrc='original'; } }
+  db.seedV=SEED_V; save(); if(n) setTimeout(()=>toast(n+' louvores adicionados ao seu repertório. Buscando as letras…', 4500), 400);
+}
 function migrateOld(){ // traz as músicas da versão anterior do app
   try{ const old=JSON.parse(localStorage.getItem('letraNoPalco.v1')); if(!old?.songs) return;
     for(const s of Object.values(old.songs)){ if(!s.title) continue; const id=songKey(s.title,s.artist);
@@ -476,7 +488,7 @@ function detectKeyFromChords(chords){
 const usesFlats = k => k? (k.minor? FLAT_KEYS.has((k.pc+3)%12) : FLAT_KEYS.has(k.pc)) : false;
 const keyLabel = k => k? noteName(k.pc, usesFlats(k)) + (k.minor?'m':'') : '';
 function keyParse(s){ const m=String(s||'').trim().replace('♯','#').replace('♭','b').match(/^([A-Ga-g])([#b]?)\s*(m(?!aj)|min|menor)?/); if(!m) return null; const pc=PC[m[1].toUpperCase()+m[2]]; return pc==null? null : {pc, minor:!!m[3]}; }
-const effKey = (song, t=0) => song?.key? {pc:((song.key.pc+t)%12+12)%12, minor:song.key.minor} : null;
+const effKey = (song, t=0) => song?.key? {pc:((song.key.pc+(song.tr||0)+t)%12+12)%12, minor:song.key.minor} : null;
 const relMaj = k => k.minor? (k.pc+3)%12 : k.pc;
 const keyOptions = () => '<option value="">— sem tom —</option>' + [false,true].map(mi=>`<optgroup label="${mi?'Menores':'Maiores'}">`+SH.map((_,pc)=>{ const l=keyLabel({pc,minor:mi}); return `<option value="${l}">${l}</option>`; }).join('')+'</optgroup>').join('');
 
@@ -504,20 +516,23 @@ async function fetchJSON(url, ms=10000){
   try{ const r=await fetch(url,{signal:ac.signal}); if(!r.ok) throw new Error('HTTP '+r.status); const txt=await r.text(); return JSON.parse(txt.replace(/^[^({\[]*\(/,'').replace(/\)\s*;?\s*$/,'')); }
   finally{ clearTimeout(t); }
 }
+async function lrc(url){ // LRCLIB com espera quando pede calma (429)
+  for(let i=0;i<5;i++){ try{ return await fetchJSON(url); }catch(e){ if(/429|abort|Failed|network/i.test(e.message) && i<4){ await sleep(1500*(i+1)); continue; } throw e; } } }
 async function fetchLyrics(title, artist){
-  const pick=arr=>{ arr=(arr||[]).filter(x=>x.plainLyrics && !x.instrumental); if(!arr.length) return null;
+  const pick=arr=>{ oks++; arr=(arr||[]).filter(x=>x.plainLyrics && !x.instrumental); if(!arr.length) return null;
     const a=norm(artist), t=norm(title);
     const score=x=>{ let s=0; if(a && norm(x.artistName)===a) s+=4; else if(a && norm(x.artistName).includes(a.split(' ')[0])) s+=2; if(norm(x.trackName)===t) s+=3; else if(norm(x.trackName).startsWith(t)) s+=1; return s; };
     arr.sort((x,y)=>score(y)-score(x)); return score(arr[0])>=3? arr[0] : null; };
-  let r=null;
-  if(artist){ try{ r=pick(await fetchJSON(`https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`)); }catch(e){ diag('lrclib: '+e.message); } }
-  if(!r){ try{ r=pick(await fetchJSON(`https://lrclib.net/api/search?q=${encodeURIComponent(title+' '+(artist||''))}`)); }catch(e){ diag('lrclib: '+e.message); } }
+  let r=null, errs=0, oks=0;
+  if(artist){ try{ r=pick(await lrc(`https://lrclib.net/api/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`)); }catch(e){ errs++; diag('lrclib: '+e.message); } }
+  if(!r){ try{ r=pick(await lrc(`https://lrclib.net/api/search?q=${encodeURIComponent(title+' '+(artist||''))}`)); }catch(e){ errs++; diag('lrclib: '+e.message); } }
   if(!r && artist){ // tenta achar o nome certo no buscador do Letras.mus.br
     try{ const d=await fetchJSON('https://solr.sscdn.co/letras/m1/?wt=json&q='+encodeURIComponent(title+' '+artist));
       const h=(d.response?.docs||[]).find(x=>String(x.t)==='2' && x.txt);
-      if(h && (norm(h.txt)!==norm(title) || norm(h.art)!==norm(artist))) r=pick(await fetchJSON(`https://lrclib.net/api/search?track_name=${encodeURIComponent(h.txt)}&artist_name=${encodeURIComponent(h.art)}`));
+      if(h && (norm(h.txt)!==norm(title) || norm(h.art)!==norm(artist))) r=pick(await lrc(`https://lrclib.net/api/search?track_name=${encodeURIComponent(h.txt)}&artist_name=${encodeURIComponent(h.art)}`));
     }catch{}
   }
+  if(!r && errs && !oks) throw new Error('internet');
   return r? {lyrics:r.plainLyrics, artist:r.artistName, duration:r.duration||0} : null;
 }
 const fillQueue=new Set(); let filling=false;
@@ -525,11 +540,11 @@ function queueFill(ids){ ids.forEach(id=>fillQueue.add(id)); if(!filling) runFil
 async function runFill(){
   filling=true;
   while(fillQueue.size){
-    const batch=[...fillQueue].slice(0,3); batch.forEach(id=>fillQueue.delete(id));
+    const batch=[...fillQueue].slice(0,2); await sleep(250); batch.forEach(id=>fillQueue.delete(id));
     await Promise.all(batch.map(async id=>{ const s=db.songs[id]; if(!s || hasLyrics(s)) return; s._busy=true; renderLib();
-      const r=await fetchLyrics(s.title, s.artist).catch(()=>null);
+      let failed=false; const r=await fetchLyrics(s.title, s.artist).catch(()=>{ failed=true; return null; });
       s._busy=false;
-      if(r){ s.text=r.lyrics; s.textSrc='internet'; if(!s.artist) s.artist=r.artist||''; if(r.duration) s.duration=r.duration; s.noLyrics=false; } else s.noLyrics=true;
+      if(r){ s.text=r.lyrics; s.textSrc='internet'; if(!s.artist) s.artist=r.artist||''; if(r.duration) s.duration=r.duration; s.noLyrics=false; } else if(!failed) s.noLyrics=true;
       save(); renderLib(); }));
   }
   filling=false; renderMed();
@@ -676,7 +691,7 @@ $('#revSave').onclick=()=>{
 let libFilter='all';
 $('#libFilter').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; libFilter=b.dataset.f; $('#libFilter').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderLib(); };
 $('#libQ').oninput=()=>renderLib();
-function keyChip(song, t=0){ const k=effKey(song,t); if(!k) return '<span class="key none">sem tom</span>'; return `<span class="key${song.keySrc==='palpite'?' guess':''}" title="${song.keySrc==='palpite'?'Tom da gravação original (palpite do Claude)':song.keySrc==='original'?'Tom original':''}">${keyLabel(k)}${t?` <small>(${t>0?'+':''}${t})</small>`:''}</span>`; }
+function keyChip(song, t=0){ const k=effKey(song,t); if(!k) return '<span class="key none">sem tom</span>'; const off=(song.tr||0)+t; return `<span class="key${song.keySrc==='palpite'?' guess':''}" title="Tom original: ${keyLabel(song.key)}${off?' · você toca '+(off>0?'+':'')+off+' semitom(ns)':''}">${keyLabel(k)}${off?` <small>(${off>0?'+':''}${off})</small>`:''}</span>`; }
 function renderLib(){
   const q=norm($('#libQ').value); let list=allSongs();
   const total=list.length;
@@ -734,13 +749,15 @@ $('#allKeyGo').onclick=()=>{ const pc=+$('#allKey').value; const lbl=keyLabel({p
   setAllKey(pc); toast(`${n} músicas agora em ${lbl}`); };
 
 /* ================= editor de música ================= */
-let edId=null;
+let edId=null, edTr=0;
+function edTrShow(){ const k=keyParse($('#edKey').value); $('#edTrLbl').textContent= k? keyLabel({pc:(k.pc+edTr+12)%12,minor:k.minor})+(edTr?` (${edTr>0?'+':''}${edTr})`:'') : '—'; }
+$('#edTrUp').onclick=()=>{ edTr=edTr>=6?edTr-11:edTr+1; edTrShow(); }; $('#edTrDown').onclick=()=>{ edTr=edTr<=-6?edTr+11:edTr-1; edTrShow(); }; $('#edKey').addEventListener('change', edTrShow);
 $('#edKey').innerHTML=keyOptions();
 function openEditor(id){
   edId=id; const s=id? db.songs[id] : {title:'', artist:'', key:null, energy:'media', text:''};
   $('#edH').textContent=id? 'Editar música' : 'Nova música';
   $('#edTitle').value=s.title; $('#edArtist').value=s.artist||''; $('#edKey').value=keyLabel(s.key); $('#edEnergy').value=s.energy||'media'; $('#edText').value=s.text||'';
-  $('#edDel').hidden=!id; $('#edPlay').hidden=!id; $('#edStatus').textContent=s.keySrc==='palpite'? 'O tom é um palpite (tom da gravação original). Confira e ajuste se você canta em outro.' : '';
+  edTr=s.tr||0; edTrShow(); $('#edDel').hidden=!id; $('#edPlay').hidden=!id; $('#edStatus').textContent=s.keySrc==='palpite'? 'O tom é um palpite (tom da gravação original). Confira e ajuste se você canta em outro.' : '';
   updCifraLink(); $('#edDlg').showModal();
 }
 function updCifraLink(){ $('#edCifra').href='https://www.cifraclub.com.br/?q='+encodeURIComponent($('#edTitle').value+' '+$('#edArtist').value); }
@@ -758,7 +775,7 @@ $('#edForm').addEventListener('submit', e=>{
   const old=edId? db.songs[edId] : null;
   const s=Object.assign(old? {...old} : {addedAt:Date.now()}, {id, title, artist, energy:$('#edEnergy').value, text:$('#edText').value});
   const k=keyParse($('#edKey').value); if(!k){ s.key=null; s.keySrc=''; } else if(!old?.key || keyLabel(old.key)!==keyLabel(k)){ s.key=k; s.keySrc='manual'; }
-  s.noLyrics=false;
+  s.noLyrics=false; s.tr=edTr;
   if(edId && edId!==id){ delete db.songs[edId]; db.medleys.forEach(m=>m.items.forEach(it=>{ if(it.id===edId) it.id=id; })); }
   db.songs[id]=s; save(); renderLib(); renderMed(); if(S.active) renderShow(); toast('Salvo');
 });
@@ -774,7 +791,7 @@ function medKey(m){ const cnt=new Map(); for(const it of m.items){ const k=effKe
 function autoMedleys(size){
   const used=new Set(db.medleys.filter(m=>!m.auto).flatMap(m=>m.items.map(i=>i.id)));
   const songs=allSongs().filter(s=>s.key && !used.has(s.id));
-  const groups=new Map(); for(const s of songs){ const r=relMaj(s.key); (groups.get(r)||groups.set(r,[]).get(r)).push(s); }
+  const groups=new Map(); for(const s of songs){ const r=relMaj(effKey(s)); (groups.get(r)||groups.set(r,[]).get(r)).push(s); }
   const meds=[], singles=[];
   for(const [r, g] of [...groups].sort((a,b)=>b[1].length-a[1].length)){
     g.sort((a,b)=>(EN[a.energy]??1)-(EN[b.energy]??1) || a.title.localeCompare(b.title,'pt-BR'));
@@ -787,15 +804,15 @@ function autoMedleys(size){
   const left=[]; const room=m=>m.items.length<=size; const tips=(m,t)=>{ if(!m.tips) m.tips=new Set([m.tip]); m.tips.add(t); m.tip=[...m.tips].join(' '); };
   // 1º tons de quinta (entram antes das que sobem), 2º as que sobem meio tom/um tom (fecham o medley)
   const climb=[];
-  for(const s of singles){ const r=relMaj(s.key); const m=meds.find(m=>room(m) && ((r-m.rel+12)%12===7 || (r-m.rel+12)%12===5));
+  for(const s of singles){ const r=relMaj(effKey(s)); const m=meds.find(m=>room(m) && ((r-m.rel+12)%12===7 || (r-m.rel+12)%12===5));
     if(m){ m.items.push({id:s.id,t:0}); tips(m,'Tons vizinhos (de quinta) emendam natural.'); } else climb.push(s); }
-  for(const s of climb){ const r=relMaj(s.key);
+  for(const s of climb){ const r=relMaj(effKey(s));
     const m=meds.find(m=>room(m) && (r-m.rel+12)%12===2) || meds.find(m=>room(m) && (r-m.rel+12)%12===1);
     if(m){ m.items.push({id:s.id,t:0}); tips(m,`A última sobe ${(r-m.rel+12)%12===2?'1 tom':'meio tom'} e fecha pra cima.`); } else left.push(s); }
   // o que sobrou: medleys em ordem crescente de tom
-  left.sort((a,b)=>relMaj(a.key)-relMaj(b.key));
+  left.sort((a,b)=>relMaj(effKey(a))-relMaj(effKey(b)));
   for(let i=0;i<left.length;i+=size){ const part=left.slice(i,i+size); if(part.length===1 && meds.length){ meds[meds.length-1].items.push({id:part[0].id,t:0}); continue; }
-    meds.push({rel:relMaj(part[0].key), items:part.map(s=>({id:s.id,t:0})), tip:'Tons diferentes, em ordem crescente: cada música sobe um pouco.'}); }
+    meds.push({rel:relMaj(effKey(part[0])), items:part.map(s=>({id:s.id,t:0})), tip:'Tons diferentes, em ordem crescente: cada música sobe um pouco.'}); }
   return meds.map(m=>{ const en=m.items.reduce((a,it)=>a+(EN[db.songs[it.id].energy]??1),0)/m.items.length;
     const o={id:uid(), auto:true, today:false, items:m.items, tip:m.tip.replace('Mesmo tom: emenda direto. ','Mesmo tom no começo. ')}; o.name=`Medley em ${medKey(o)} · ${enName(en)}`; return o; });
 }
@@ -887,7 +904,7 @@ function openShow(meds){
 function playSingle(id){ S.list=[{id, t:0, med:'Ensaio', mi:0, mn:1}]; S.pos=0; S.cur=0; showTab('show'); renderShow(true); }
 function songRows(song, t, chords){
   const p=parseChart(song.text||''); const k=effKey(song,t); const flats=usesFlats(k); const rows=[]; let sec='';
-  p.items.forEach((it,i)=>{ if(it.type==='sec') sec=it.text; if(it.type==='ly'){ const pr=p.items[i-1]; rows.push({ly:it.text, ch: chords && p.hasChords && pr?.type==='ch'? transposeLine(pr.text,t,flats).replace(/\s+$/,'') : null, sec}); sec=''; } });
+  p.items.forEach((it,i)=>{ if(it.type==='sec') sec=it.text; if(it.type==='ly'){ const pr=p.items[i-1]; rows.push({ly:it.text, ch: chords && p.hasChords && pr?.type==='ch'? transposeLine(pr.text,(song.tr||0)+t,flats).replace(/\s+$/,'') : null, sec}); sec=''; } });
   return {rows, mono: chords && p.hasChords};
 }
 function renderShow(fresh){
@@ -928,6 +945,8 @@ function renderSetl(){
   $('#slList').innerHTML=html.join(''); $('#slList .cur')?.scrollIntoView({block:'nearest'});
 }
 $('#slList').onclick=e=>{ const b=e.target.closest('.sl-s'); if(!b) return; S.pos=+b.dataset.p; S.finals=[]; renderShow(true); $('#setl').classList.remove('open'); };
+function bumpTr(d){ const it=S.list[S.pos]; const s=it&&db.songs[it.id]; if(!s) return; if(!s.key){ toast('Defina o tom desta música no Repertório primeiro.'); return; } let v=(s.tr||0)+d; if(v>6) v-=12; if(v<-6) v+=12; s.tr=v; save(); const c=S.cur; renderShow(false); S.cur=c; renderSlide(); toast(`Tom ${keyLabel(effKey(s,it.t))}${v?` (${v>0?'+':''}${v} do original ${keyLabel(s.key)})`:' (original)'}`, 1600); }
+$('#trUp').onclick=()=>bumpTr(1); $('#trDown').onclick=()=>bumpTr(-1);
 $('#nextSong').onclick=()=>goSong(1); $('#prevSong').onclick=()=>goSong(-1);
 $('#slideBody').addEventListener('click', e=>{ const r=$('#slideBody').getBoundingClientRect(); goSong(e.clientX < r.left + r.width*0.3 ? -1 : 1); });
 $('#listBtn').onclick=e=>{ e.stopPropagation(); $('#setl').classList.toggle('open'); };
@@ -1015,6 +1034,7 @@ function showTab(t){ cur=t; document.querySelectorAll('nav.tabs button').forEach
   if(t==='med') renderMed(); if(t==='show' && !S.list.length) openShowSilently(); if(t!=='show' && S.listening) stopListening(); if(t==='set') $('#diagLog').textContent=DIAG.slice().reverse().join('\n')||'—'; }
 function openShowSilently(){ const meds=db.medleys.filter(m=>m.today); S.list=[]; meds.forEach(m=>m.items.forEach((it,i)=>{ if(db.songs[it.id]) S.list.push({id:it.id,t:it.t||0,med:m.name,mi:i,mn:m.items.length}); })); S.pos=0; renderShow(true); }
 document.querySelector('nav.tabs').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.tab==='show' && db.medleys.some(m=>m.today) && cur!=='show'){ showTab('show'); openShowSilently(); } else showTab(b.dataset.tab); };
+applySeed();
 function renderAll(){ renderLib(); renderMed(); keyUI(); applyPrefs(); }
 renderAll();
 if(allSongs().some(s=>!hasLyrics(s) && !s.noLyrics)) queueFill(allSongs().filter(s=>!hasLyrics(s) && !s.noLyrics).map(s=>s.id));
