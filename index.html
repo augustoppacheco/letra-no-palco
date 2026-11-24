@@ -202,6 +202,11 @@ a{color:var(--amber)}
   header.top,.no-print{display:none!important}
   body{background:#fff;color:#000}
 }
+.stage-main,.stage-empty{min-width:0;max-width:100%}
+.pick{display:flex;flex-direction:column;gap:8px;margin:14px auto;text-align:left;max-height:52vh;overflow:auto;max-width:640px;width:100%}
+.pick .pk{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--ink-2);color:var(--paper);font:inherit;cursor:pointer;text-align:left;min-width:0}
+.pick .pk b{font-size:17px}.pick .pk span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick .pk.today{border:2px solid var(--amber)}
 </style>
 </head>
 <body>
@@ -211,7 +216,7 @@ a{color:var(--amber)}
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="rep" aria-selected="true">Repertório</button>
     <button role="tab" data-tab="med" aria-selected="false">Medleys</button>
-    <button role="tab" data-tab="show" aria-selected="false" class="go">▶ Tocar hoje</button>
+    <button role="tab" data-tab="show" aria-selected="false" class="go">▶ Ao vivo</button>
     <button role="tab" data-tab="set" aria-selected="false">Ajustes</button>
   </nav>
 </header>
@@ -286,7 +291,7 @@ a{color:var(--amber)}
  <div class="page-inner">
   <div>
     <h2>Medleys</h2>
-    <p class="lead">O app junta músicas do mesmo tom (ou de tons que emendam bem) e das lentas para as animadas. Marque <b>Tocar hoje</b> nos medleys do show.</p>
+    <p class="lead">O app junta músicas do mesmo tom (ou de tons que emendam bem) e das lentas para as animadas. Para cantar um medley, toque em <b>▶ Tocar ao vivo</b> nele: a letra abre em tela cheia e vai acompanhando a sua voz. Para juntar vários medleys num show, toque em <b>+ Repertório de hoje</b> em cada um e depois em <b>▶ Tocar ao vivo</b> na barra de cima.</p>
   </div>
   <div class="today" id="todayBar"></div>
   <div class="card">
@@ -310,15 +315,17 @@ a{color:var(--amber)}
  <div class="stage">
   <div class="stage-main">
     <div class="stage-empty" id="showEmpty">
-      <h2>Nada marcado para hoje</h2>
-      <p class="lead">Vá em <b>Medleys</b> e toque em <b>Tocar hoje</b> nos medleys que vai cantar. Eles aparecem aqui na ordem.</p>
-      <button class="btn primary" id="goMed">Escolher medleys</button>
+      <h2>O que vamos cantar?</h2>
+      <p class="lead">Escolha um medley. A letra abre aqui e vai passando sozinha enquanto você canta.</p>
+      <div class="pick" id="showPick"></div>
+      <button class="btn ghost" id="goMed">Montar ou editar medleys</button>
     </div>
     <div class="st-top" id="stTop" hidden>
       <div class="st-title"><div class="m" id="stMed"></div><div class="t" id="stSong"></div><div class="a" id="stArtist"></div></div>
       <span class="trbox"><button class="trb" id="trDown" title="Descer meio tom">−</button><span class="key" id="stKey"></span><button class="trb" id="trUp" title="Subir meio tom">+</button></span>
       <button class="mic" id="micBtn"><span class="dot"></span><span id="micLbl">Seguir minha voz</span></button>
       <button class="btn icon" id="listBtn" title="Lista do show">☰</button>
+      <button class="btn" id="swapBtn" title="Escolher outro medley">Trocar medley</button>
       <button class="btn icon" id="fsBtn" title="Tela cheia">⛶</button>
     </div>
     <div class="slide-wrap" id="stWrap" hidden>
@@ -439,6 +446,7 @@ let db = (()=>{ try{ return JSON.parse(localStorage.getItem(LS)) || null; }catch
 if(!db){ db={songs:{}, medleys:[], prefs:{}}; migrateOld(); }
 db.songs ||= {}; db.medleys ||= []; db.prefs ||= {};
 const prefs = Object.assign({font:34, lines:6, autoNext:false, showChords:true, apiKey:'', medSize:4, lang:'pt-BR'}, db.prefs); db.prefs=prefs;
+if((db.autoNextV||0)<1){ prefs.autoNext=true; db.autoNextV=1; }
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem(LS, JSON.stringify(db)); }catch(e){ toast('Não consegui salvar no aparelho: '+e.message, 5000); } }, 150); }
 const allSongs = () => Object.values(db.songs).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
@@ -856,10 +864,11 @@ $('#medClear').onclick=()=>{ if(!db.medleys.length) return; if(!confirm(`Apagar 
 $('#medNew').onclick=()=>{ db.medleys.unshift({id:uid(), auto:false, today:false, name:'Novo medley', items:[], tip:''}); save(); renderMed(); };
 function renderToday(){
   const meds=db.medleys.filter(m=>m.today); const n=meds.reduce((a,m)=>a+m.items.length,0);
-  $('#todayBar').innerHTML = meds.length? `<div><b>Hoje: ${meds.length} medley${meds.length===1?'':'s'} · ${n} músicas</b><div class="small muted">${meds.map(m=>esc(m.name)).join(' → ')}</div></div><span class="spacer"></span><button class="btn primary" data-act="play">▶ Abrir o palco</button>`
-    : `<div><b>Nada marcado para hoje</b><div class="small muted">Toque em “Tocar hoje” nos medleys do show. A ordem do palco é a ordem desta página.</div></div>`;
+  $('#todayBar').innerHTML = meds.length? `<div><b>Repertório de hoje: ${meds.length} medley${meds.length===1?'':'s'} · ${n} músicas</b><div class="small muted">${meds.map(m=>esc(m.name)).join(' → ')}</div></div><span class="spacer"></span><button class="btn primary" data-act="play">▶ Tocar ao vivo</button>`
+    : `<div><b>Repertório de hoje vazio</b><div class="small muted">Toque em “+ Repertório de hoje” nos medleys do show. Eles tocam na ordem desta página (use ↑ ↓ para reordenar).</div></div>`;
 }
-$('#todayBar').onclick=e=>{ if(e.target.closest('[data-act=play]')) openShow(); };
+$('#todayBar').onclick=e=>{ if(e.target.closest('[data-act=play]')) goLive(); };
+function goLive(meds){ openShow(meds); if(S.list.length && !S.listening){ Promise.resolve().then(startListening).catch(()=>{}); } }
 function renderMed(){
   renderToday();
   const addOpts = '<option value="">+ adicionar música…</option>'+allSongs().map(s=>`<option value="${esc(s.id)}">${esc(s.title)}${s.key?' ('+keyLabel(s.key)+')':''}</option>`).join('');
@@ -872,7 +881,7 @@ function renderMed(){
         return `<div class="mi" data-i="${ii}"><span class="n">${ii+1}</span><div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="fl">${fl? '“'+esc(fl)+'”' : esc(s.artist||'')}</div></div>
           <div class="ctl">${keyChip(s, it.t||0)}<button data-act="tdown" title="Descer meio tom">−</button><button data-act="tup" title="Subir meio tom">+</button><button data-act="up" title="Mover para cima">▲</button><button data-act="down" title="Mover para baixo">▼</button><button data-act="rm" title="Tirar do medley">✕</button></div></div>`; }).join('') || '<div class="small muted" style="padding:6px 0">Vazio. Adicione músicas abaixo.</div>'}</div>
       <div class="row"><select data-act="add" style="flex:1;padding:6px 8px;font-size:14px">${addOpts}</select></div>
-      <div class="row"><button class="toggle" data-act="today" aria-pressed="${!!m.today}">${m.today?'✓ Tocar hoje':'Tocar hoje'}</button><button class="btn small ghost" data-act="playm">▶ Ensaiar</button><span class="spacer"></span>
+      <div class="row"><button class="btn primary" data-act="playm" ${m.items.length?'':'disabled'}>▶ Tocar ao vivo</button><button class="toggle" data-act="today" aria-pressed="${!!m.today}">${m.today?'✓ No repertório de hoje':'+ Repertório de hoje'}</button><span class="spacer"></span>
         <button class="btn small ghost icon" data-act="mup" title="Mover medley para cima">↑</button><button class="btn small ghost icon" data-act="mdown" title="Mover medley para baixo">↓</button><button class="btn small ghost danger" data-act="mdel">Excluir</button></div>
     </div>`; }).join('') : '<div class="empty">Nenhum medley ainda. Toque em “Montar automaticamente”.</div>';
 }
@@ -884,7 +893,7 @@ $('#medList').addEventListener('click', e=>{
   else if(act==='down' && i<m.items.length-1){ [m.items[i+1],m.items[i]]=[m.items[i],m.items[i+1]]; mark(); }
   else if(act==='rm'){ m.items.splice(i,1); mark(); }
   else if(act==='today'){ m.today=!m.today; }
-  else if(act==='playm'){ openShow([m]); return; }
+  else if(act==='playm'){ goLive([m]); return; }
   else if(act==='mup'||act==='mdown'){ const k=+card.dataset.m, j=k+(act==='mup'?-1:1); if(j<0||j>=db.medleys.length) return; [db.medleys[k],db.medleys[j]]=[db.medleys[j],db.medleys[k]]; }
   else if(act==='mdel'){ if(!confirm(`Excluir o medley "${m.name}"? As músicas continuam no repertório.`)) return; db.medleys.splice(+card.dataset.m,1); }
   else return;
@@ -912,7 +921,10 @@ function songRows(song, t, chords){
 function renderShow(fresh){
   const has=S.list.length>0; S.active=has;
   $('#showEmpty').hidden=has; ['#stTop','#stWrap','#stNav'].forEach(s=>$(s).hidden=!has); $('#heard').hidden=!has || !S.listening; $('#setl').hidden=!has;
-  if(!has) return;
+  if(!has){ const today=db.medleys.filter(m=>m.today&&m.items.length);
+    $('#showPick').innerHTML=(today.length?`<button class="pk today" data-pk="today"><b>▶ Repertório de hoje</b><span>${today.length} medley${today.length===1?'':'s'} · ${today.reduce((a,m)=>a+m.items.length,0)} músicas</span></button>`:'')+
+      db.medleys.map((m,i)=>m.items.length?`<button class="pk" data-pk="${i}"><b>▶ ${esc(m.name)}</b><span>${m.items.map(x=>esc(db.songs[x.id]?.title||'')).join(' · ')}</span></button>`:'').join('');
+    return; }
   const it=S.list[S.pos], s=db.songs[it.id];
   if(!s){ S.list.splice(S.pos,1); S.pos=Math.min(S.pos,S.list.length-1); renderShow(fresh); return; }
   $('#stMed').textContent=`${it.med} · ${it.mi+1}/${it.mn}`; $('#stSong').textContent=s.title; $('#stArtist').textContent=s.artist||'';
@@ -1003,6 +1015,8 @@ async function startListening(){
   try{ S.wake=await navigator.wakeLock?.request('screen'); }catch{}
 }
 function stopListening(){ S.listening=false; const r=S.rec; S.rec=null; try{ r?.stop(); }catch{} $('#micBtn').classList.remove('live'); $('#micLbl').textContent='Seguir minha voz'; $('#heard').hidden=true; try{ S.wake?.release(); }catch{} }
+$('#showPick').onclick=e=>{ const b=e.target.closest('[data-pk]'); if(!b) return; const k=b.dataset.pk; goLive(k==='today'? undefined : [db.medleys[+k]]); };
+$('#swapBtn').onclick=()=>{ stopListening(); S.list=[]; renderShow(); };
 $('#micBtn').onclick=()=> S.listening? stopListening() : startListening();
 
 /* ================= ajustes ================= */
