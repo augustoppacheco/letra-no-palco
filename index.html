@@ -6,21 +6,21 @@
 <meta name="theme-color" content="#12101c">
 <title>Letra no Palco</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{
-  --ink:#12101c; --ink-2:#1b1829; --ink-3:#262238; --line:#353049;
-  --paper:#eeeaf6; --muted:#9a93b3; --dim:#5f5878;
-  --amber:#f6b545; --amber-2:#ffd27f; --teal:#5fd0c0; --rose:#ff7a8a; --ok:#7ad98c;
-  --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
-  --f-body:"Atkinson Hyperlegible","Helvetica Neue",system-ui,sans-serif;
+  --ink:#0c0a12; --ink-2:#16131f; --ink-3:#221d2e; --line:#2c2638;
+  --paper:#f4f1ea; --muted:#a7a2b5; --dim:#5d576c;
+  --amber:#f7b955; --amber-2:#ff7a59; --grad:linear-gradient(90deg,#f7b955,#ff7a59); --lilac:#c9b8ff; --teal:#5fd0c0; --rose:#ff7a8a; --ok:#7ad98c;
+  --f-display:Inter,"SF Pro Display",system-ui,sans-serif;
+  --f-body:Inter,"SF Pro Text",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
   --lyr:34px;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--ink);color:var(--paper);font:16px/1.45 var(--f-body);-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(120% 50% at 50% 0%,#241a38 0%,#120f1a 50%,var(--ink) 100%) fixed var(--ink);color:var(--paper);font:16px/1.45 var(--f-body);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
@@ -41,9 +41,9 @@ h2{font:800 30px/1.1 var(--f-display);margin:0;text-wrap:balance}
 h3{font:600 18px/1.2 var(--f-display);margin:0}
 .lead{color:var(--muted);margin:0;max-width:68ch}
 .card{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--ink-2);padding:9px 14px;border-radius:10px;font-weight:700;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);padding:10px 16px;border-radius:14px;font-weight:700;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
-.btn.primary{background:var(--amber);border-color:var(--amber);color:#201400}
+.btn.primary{background:var(--grad);border-color:transparent;color:#1a1010;font-weight:800}
 .btn.small{padding:6px 10px;font-size:14px;border-radius:8px}
 .btn.icon{padding:6px 9px;min-width:34px}
 .btn.ghost{background:none}
@@ -207,6 +207,73 @@ a{color:var(--amber)}
 .pick .pk{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--ink-2);color:var(--paper);font:inherit;cursor:pointer;text-align:left;min-width:0}
 .pick .pk b{font-size:17px}.pick .pk span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pick .pk.today{border:2px solid var(--amber)}
+
+/* ===== visual 2026 ===== */
+h2{font-weight:800;letter-spacing:-.02em}
+.card,.med,.song,dialog{border-radius:20px!important}
+.card,.med{background:rgba(255,255,255,.04)!important;border-color:rgba(255,255,255,.08)!important}
+nav.tabs button[aria-selected="true"]{background:rgba(255,255,255,.1)}
+.key{border-radius:8px}
+/* ===== ao vivo ===== */
+.stage{background:none}
+.stage-main{max-width:920px;width:100%;margin:0 auto;gap:10px}
+.lv-top{display:flex;align-items:center;gap:8px}
+.lv-top .mic{margin-right:auto}
+.lv-med{flex:none;min-width:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--lilac);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{width:40px;height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:var(--paper);font-size:17px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.mic{border:0;background:rgba(255,255,255,.08);padding:9px 14px;font-weight:700;font-size:14px}
+.mic.live{background:rgba(31,209,165,.14);color:#5ff0c6}
+.mic.live .dot{box-shadow:0 0 10px #5ff0c6}
+.parts{display:flex;gap:5px;flex-wrap:wrap}
+.parts button{flex:1 1 22px;min-width:22px;max-width:90px;height:22px;border-radius:7px;border:0;padding:0;background:rgba(255,255,255,.1);position:relative;overflow:hidden}
+.parts button.ch{background:rgba(255,154,107,.18)}
+.parts button.done{background:var(--grad);opacity:.55}
+.parts button.cur{background:rgba(255,255,255,.14);outline:2px solid var(--amber);outline-offset:1px}
+.parts button.cur::before{content:"";position:absolute;inset:0 auto 0 0;width:var(--f,0%);background:var(--grad);transition:width .3s}
+.parts button span{position:relative;font-size:10px;font-weight:800;color:rgba(255,255,255,.75);letter-spacing:.04em}
+.parts button.done span,.parts button.cur span{color:#1a1010}
+.lv-main{flex:1;min-height:0;display:flex;flex-direction:column}
+.lv-t{font:800 clamp(26px,5vw,40px)/1.08 var(--f-display);letter-spacing:-.02em;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin-top:6px}
+.lv-sub .trbox .key{background:rgba(247,185,85,.14);color:var(--amber);font-weight:800;padding:4px 10px}
+.lyr{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:safe center;gap:clamp(8px,1.8vh,18px);overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none;padding:8px 0}
+.lyr .ln{font:600 min(calc(var(--lyr)*.66),5.6vw)/1.28 var(--f-body);color:rgba(255,255,255,.32);white-space:pre-wrap;overflow-wrap:anywhere}
+.lyr .ln.past{color:rgba(255,255,255,.2)}
+.lyr .ln.now{font-weight:800;font-size:min(calc(var(--lyr)*1.0),8.4vw);line-height:1.15;letter-spacing:-.01em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;text-wrap:balance}
+.lyr .tag{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ff9a6b;font-weight:800;margin-bottom:-6px}
+.lyr .ch{font:700 calc(var(--lyr)*.48)/1.1 var(--f-mono);color:rgba(247,185,85,.75);white-space:pre;margin-bottom:-6px}
+.lyr .empty{color:var(--muted);font-size:18px;line-height:1.5}
+.lyr .empty b{display:block;color:var(--paper);font-size:26px;margin-bottom:6px}
+.lyr.enter .ln.now{animation:up .28s ease-out}
+.lyr.swap{animation:fade .35s ease-out}
+.lv-foot{display:flex;flex-direction:column;gap:10px}
+.nextc{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:12px 16px;cursor:pointer}
+.nx1{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.nx1 .key{background:rgba(247,185,85,.14);color:var(--amber);padding:2px 8px;font-size:12px}
+.nx2{font-size:18px;font-weight:800;margin:4px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nextc .ref{font-size:15px;line-height:1.45;color:#e9e3f7;border-left:3px solid var(--amber);padding-left:10px}
+.nextc .ref:empty{display:none}
+.ctl{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.ctl .b{height:54px;border-radius:16px;border:0;background:rgba(255,255,255,.08);color:var(--paper);font-weight:800;font-size:16px}
+.ctl .b.p{background:var(--grad);color:#1a1010}
+.ctl .b:disabled{opacity:.35}
+.heard{text-align:center}
+.toast{background:rgba(30,26,42,.92)!important;color:var(--paper)!important;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);border-radius:16px!important}
+/* escolher medley */
+.stage-empty{max-width:640px;width:100%;align-items:stretch;text-align:left;margin:0 auto}
+.stage-empty h2{font-size:34px}
+.pick{max-height:none;overflow:visible;margin:4px 0}
+.pick .pk{display:block;padding:16px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);cursor:default}
+.pick .pk.today{border:2px solid var(--amber)}
+.pk .ct{font-weight:800;font-size:17px}
+.pk .cs{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+.pk .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.pk .chip{font-size:12px;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.08);color:#ddd;font-weight:600}
+.pk .chip.w{background:rgba(255,107,107,.15);color:#ff9b9b}
+.pk .go{margin-top:12px;width:100%;height:48px;border-radius:14px;border:0;background:var(--grad);color:#1a1010;font-weight:800;font-size:16px;cursor:pointer}
+.warn{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.25);border-radius:16px;padding:12px 14px;font-size:14px;color:#ffc2c2}
+.warn button{background:none;border:0;color:#fff;text-decoration:underline;padding:0;font-weight:700;cursor:pointer}
+@media (max-width:640px){ .stage-main{padding:10px 14px 12px} .lv-t{font-size:28px} .ctl .b{height:52px} }
 </style>
 </head>
 <body>
@@ -315,31 +382,29 @@ a{color:var(--amber)}
  <div class="stage">
   <div class="stage-main">
     <div class="stage-empty" id="showEmpty">
-      <h2>O que vamos cantar?</h2>
-      <p class="lead">Escolha um medley. A letra abre aqui e vai passando sozinha enquanto você canta.</p>
+      <h2>Ao vivo</h2>
+      <p class="lead" id="pickLead">Escolha um medley. A letra abre e vai passando sozinha enquanto você canta.</p>
+      <div class="warn" id="pickWarn" hidden></div>
       <div class="pick" id="showPick"></div>
       <button class="btn ghost" id="goMed">Montar ou editar medleys</button>
     </div>
-    <div class="st-top" id="stTop" hidden>
-      <div class="st-title"><div class="m" id="stMed"></div><div class="t" id="stSong"></div><div class="a" id="stArtist"></div></div>
-      <span class="trbox"><button class="trb" id="trDown" title="Descer meio tom">−</button><span class="key" id="stKey"></span><button class="trb" id="trUp" title="Subir meio tom">+</button></span>
-      <button class="mic" id="micBtn"><span class="dot"></span><span id="micLbl">Seguir minha voz</span></button>
-      <button class="btn icon" id="listBtn" title="Lista do show">☰</button>
-      <button class="btn" id="swapBtn" title="Escolher outro medley">Trocar medley</button>
-      <button class="btn icon" id="fsBtn" title="Tela cheia">⛶</button>
+    <div class="lv-top" id="stTop" hidden>
+      <button class="mic" id="micBtn"><span class="dot"></span><span id="micLbl">Ouvir minha voz</span></button>
+      <button class="ib" id="listBtn" title="Lista do show">☰</button>
+      <button class="ib" id="swapBtn" title="Trocar medley">⇄</button>
+      <button class="ib" id="fsBtn" title="Tela cheia">⛶</button>
     </div>
-    <div class="slide-wrap" id="stWrap" hidden>
-      <div class="slide" id="slide">
-        <div class="slide-head"><span id="slSec"></span><span id="slCount"></span></div>
-        <div class="slide-body" id="slideBody"></div>
-        <div class="prog"><i id="prog"></i></div>
-        <div class="tap-hint"><span>◀ toque aqui: anterior</span><span>toque aqui: próxima música ▶</span></div>
-      </div>
+    <div class="lv-main" id="stWrap" hidden>
+      <div class="parts" id="parts" aria-label="Partes da música"></div>
+      <div class="lv-med" id="stMed" style="margin-top:12px"></div>
+      <div class="lv-t" id="stSong" style="margin-top:2px"></div>
+      <div class="lv-sub"><span class="trbox"><button class="trb" id="trDown" title="Descer meio tom">−</button><span class="key" id="stKey"></span><button class="trb" id="trUp" title="Subir meio tom">+</button></span><span id="stArtist"></span></div>
+      <div class="lyr" id="slideBody"></div>
     </div>
     <div class="heard" id="heard" hidden></div>
-    <div class="st-nav" id="stNav" hidden>
-      <button class="btn prevbtn" id="prevSong" title="Música anterior">◀</button>
-      <button class="next" id="nextSong"><div style="min-width:0"><div class="lbl" id="nxLbl">Próxima</div><div class="t" id="nxT"></div><div class="fl" id="nxF"></div></div><span class="arrow">▶</span></button>
+    <div class="lv-foot" id="stNav" hidden>
+      <div class="nextc" id="nextCard"><div class="nx1"><span id="nxLbl">A seguir</span><span class="key" id="nxK"></span></div><div class="nx2" id="nxT"></div><div class="ref" id="nxF"></div></div>
+      <div class="ctl"><button class="b" id="prevSong" title="Música anterior">◀</button><button class="b p" id="nextSong">Próxima música ▶</button></div>
     </div>
   </div>
   <aside class="setl" id="setl"><h3>Show de hoje</h3><div id="slList"></div></aside>
@@ -527,7 +592,12 @@ async function fetchJSON(url, ms=10000){
 }
 async function lrc(url){ // LRCLIB com espera quando pede calma (429)
   for(let i=0;i<5;i++){ try{ return await fetchJSON(url); }catch(e){ if(/429|abort|Failed|network/i.test(e.message) && i<4){ await sleep(1500*(i+1)); continue; } throw e; } } }
+const LYR_V=2, LYR={"doce presenca|sergio saas":0,"espirito santo ore por mim|comunidade crista de vilhena":0,"fiel e quem te prometeu|matheus trindade":0,"o motivo do louvor|adhemar de campos":0,"refugio|emaus music":0,"te louvamos|vanilda bordieri":0,"teu e o reino|prisma brasil":0,"shalom|john dias":0,"jesus esta la|nair nany":0,"hosana|julliany souza":0,"a ele a gloria|gabriela rocha":[9256279],"a tua palavra escondi|josue barbosa lira":[30654321],"acende outra vez|jefferson suellen":[8290234],"aclame ao senhor|diante do trono":[31964873],"alem do impossivel|felipe rodrigues":[40361707],"ao unico|aline barros":[3828290],"aonde esta deus|eli soares":[33174171],"ate que o senhor venha|ministerio zoe":[8290198],"aviva nos a terra clama|davi fernandes":[12985700],"cadeias quebrar|soraya moraes":[11242208],"cancao que nao envelhece|julliany souza":[8151951],"com muito louvor|cassiane":[32746450],"consagracao|aline barros":[32547854],"creio que tu es a cura|gabriela rocha":[9256399],"cristo|som do reino alessandro vilas boas os bravos":[14199539],"deixa o ceu descer|cassiane":[14320241],"deus dos deuses|lauriete":[11841634],"digno e o senhor|aline barros":[10376039],"e demais|elaine de jesus":[13542111],"e tudo sobre voce|morada":[36733707],"em teus bracos|laura souguellis":[14492923],"emaus|morada":[36075101],"era eu|casa worship":[13518190],"escape|renascer praise":[30004791],"eu me rendo|renascer praise":[17136594],"eu so quero tua presenca|theo rubia":[17246440],"eu tenho voce|marcelo markes":[20625640],"eu vou construir|juliano son":[9256530],"fogo em teus olhos|anna clara rocha":[34360874],"gratidao|fhop music":[14007126],"hino da vitoria|cassiane":[13846505],"jeova jireh|aline barros":[6108733],"jo|midian lima":[7924817],"lindo momento|julliany souza":[7904182],"me ama|gabriela rocha":[37728189],"me atraiu|gabriela rocha":[9256672],"messias|marcelo markes":[23625682],"meu barquinho|giselli cristina":[12285981],"na terra como no ceu|michelle nascimento":[13408142],"nada alem do sangue|fernandinho":[32684553],"nada mais|gabriel guedes":[11881086],"o escudo|voz da verdade":[9256776],"o fogo ardera|alexsander lucio":[17111402],"o nome de jesus|midian lima":[13146885],"o que sua gloria fez comigo|fernanda brum":[9256787],"oferta agradavel a ti|cassiane":[30654321],"oh quao lindo esse nome e|ana nobrega":[9256799],"ousado amor|isaias saad":[9256809],"pra sempre|fernandinho":[9256848],"preciso de ti|diante do trono":[14776711],"primeira essencia|aline barros":[10386407],"primeiro amor|aline barros":[6287181],"quao grande e o meu deus|soraya moraes":[9256882],"que se abram os ceus|nivea soares":[9256867],"quem e esse|julliany souza":[18007665],"quero ser como crianca|roberto marinho":[12910625],"redentor|marcelo markes":[12891461],"renova me|aline barros":[9683108],"respirar|diante do trono ana paula valadao":[16900563],"ressuscita me|aline barros":[12830529],"rude cruz|fernandinho":[14412500],"ruja o leao|isaias saad":[9256899],"santo espirito|laura souguellis":[9256910],"sem limites|aline barros":[32931132],"senhor e rei|davi sacer":[40420644],"sinto fluir|marcelo markes":[12455809],"so tu es santo|morada":[9256953],"te exaltamos|emaus music":[36340165,"Te exaltamos",null],"teus olhos revelam|jozyanne":[13821627],"the lord will provide|passion":[32099319],"toda terra|gabriela rocha":[33210994],"tua palavra|aline barros":[6206320],"tudo e perda|felipe rodrigues":[38664574],"um novo dia|get worship":[30229161],"uma carta viva|get worship":[30620225],"uma vez|fhop music":[37448968],"vem me buscar|jefferson suellen":[8290289],"vitorioso es|gabriel guedes":[32868515],"voltemos ao inicio|laura souguellis":[29962435],"o fogo nunca dorme|alessandro vilas boas":[11801835],"santo pra sempre|gabriel guedes":[31824452],"e ele|drops ina":[14835031],"joao 20|vitor santana":[36544642,null,"O universo chora"],"a maior honra|julliany souza":[34714330],"saudade|felipe rodrigues":[36708594],"leao de juda|julliany souza":[31586404],"eu nao perdi o controle|samuel messias":[31272305],"a bencao|gabriel guedes":[9256271],"lindo es|livres para adorar":[15745002,null,"Só quero, só quero"],"yeshua|alessandro vilas boas":[21109791],"yahweh se manifestara|oasis ministry":[36435399],"a casa e sua|casa worship":[29641779],"tu es|fhop music":[23674681,null,"É Ele"],"santidade|aline barros":[10387668],"essencia da adoracao|david quinlan":[8019092],"eu vou orar|nair nany":[24054991],"enche me|isaias saad":[9256472],"a boa parte|fhop music":[11153734],"vou te alegrar|aline barros":[6263694],"maranata|alessandro vilas boas":[11825860],"cancao de simeao|drops ina":[10744106],"pode morar aqui|theo rubia":[11087409],"oh se fendesses|morada":[36149518],"tudo e teu|fhop music":[15452734],"sublime|fhop music":[32919170],"firmado na rocha|alessandro vilas boas":[40466600],"majestade|fhop music":[29443175],"alfa e omega|fhop music":[29968571],"nada mais|fhop music":[23142204],"meu mestre|irmao lazaro":[19755780],"me leva pra casa|israel subira":[16919579],"alem do rio azul|voz da verdade":[10318969]};
+const lyrRef = (title,artist) => LYR[songKey(title,artist)];
+function cutLyrics(txt, from, to){ let L=String(txt||'').split('\n'); const f=s=>norm(s); if(from){ const i=L.findIndex(l=>f(l).startsWith(f(from))); if(i>0) L=L.slice(i); } if(to){ const j=L.findIndex((l,k)=>k>0 && f(l).startsWith(f(to))); if(j>0) L=L.slice(0,j); } return L.filter(l=>!/^\s*\(?lord\)?\s*$/i.test(l)).join('\n').trim(); }
+async function fetchLyricsById(ref){ const [id,from,to]=ref; const x=await lrc('https://lrclib.net/api/get/'+id); if(!x?.plainLyrics) return null; return {lyrics:cutLyrics(x.plainLyrics,from,to), artist:x.artistName, duration:x.duration||0, ref:id}; }
 async function fetchLyrics(title, artist){
+  const ref=lyrRef(title,artist); if(ref===0) return null; if(ref) return fetchLyricsById(ref);
   const pick=arr=>{ oks++; arr=(arr||[]).filter(x=>x.plainLyrics && !x.instrumental); if(!arr.length) return null;
     const a=norm(artist), t=norm(title);
     const score=x=>{ let s=0; if(a && norm(x.artistName)===a) s+=4; else if(a && norm(x.artistName).includes(a.split(' ')[0])) s+=2; if(norm(x.trackName)===t) s+=3; else if(norm(x.trackName).startsWith(t)) s+=1; return s; };
@@ -553,7 +623,7 @@ async function runFill(){
     await Promise.all(batch.map(async id=>{ const s=db.songs[id]; if(!s || hasLyrics(s)) return; s._busy=true; renderLib();
       let failed=false; const r=await fetchLyrics(s.title, s.artist).catch(()=>{ failed=true; return null; });
       s._busy=false;
-      if(r){ s.text=r.lyrics; s.textSrc='internet'; if(!s.artist) s.artist=r.artist||''; if(r.duration) s.duration=r.duration; s.noLyrics=false; } else if(!failed) s.noLyrics=true;
+      if(r){ s.text=r.lyrics; s.textSrc='internet'; s.lyrRef=r.ref||null; if(!s.artist) s.artist=r.artist||''; if(r.duration) s.duration=r.duration; s.noLyrics=false; } else if(!failed) s.noLyrics=true;
       save(); renderLib(); }));
   }
   filling=false; renderMed();
@@ -904,7 +974,7 @@ $('#medList').addEventListener('change', e=>{ const el=e.target; const card=el.c
   if(el.dataset.act==='add' && el.value){ m.items.push({id:el.value, t:0}); m.auto=false; save(); renderMed(); } });
 
 /* ================= palco ================= */
-const S={active:false, list:[], pos:0, rows:[], words:[], cur:0, listening:false, rec:null, finals:[], interim:'', pinUntil:0};
+const S={active:false, list:[], pos:0, rows:[], parts:[], words:[], cur:0, listening:false, rec:null, finals:[], interim:'', pinUntil:0};
 const STOP=new Set('a o e de da do das dos que eu te me se um uma em no na nos nas pra pro por com voce meu minha teu tua seu sua ao os as mais mas nao ja so la ai oh uh ah ou tu ele ela isso esse essa'.split(' '));
 function phon(w){ return w.replace(/ch/g,'x').replace(/lh/g,'li').replace(/nh/g,'n').replace(/h/g,'').replace(/qu/g,'k').replace(/c(?=[ei])/g,'s').replace(/c/g,'k').replace(/sc|ss|z|ç/g,'s').replace(/y/g,'i').replace(/w/g,'v').replace(/(.)\1+/g,'$1').replace(/m$/,'n').replace(/s$/,'').replace(/[aeiou]$/,''); }
 function openShow(meds){
@@ -914,40 +984,66 @@ function openShow(meds){
 }
 function playSingle(id){ S.list=[{id, t:0, med:'Ensaio', mi:0, mn:1}]; S.pos=0; S.cur=0; showTab('show'); renderShow(true); }
 function songRows(song, t, chords){
-  const p=parseChart(song.text||''); const k=effKey(song,t); const flats=usesFlats(k); const rows=[]; let sec='';
-  p.items.forEach((it,i)=>{ if(it.type==='sec') sec=it.text; if(it.type==='ly'){ const pr=p.items[i-1]; rows.push({ly:it.text, ch: chords && p.hasChords && pr?.type==='ch'? transposeLine(pr.text,(song.tr||0)+t,flats).replace(/\s+$/,'') : null, sec}); sec=''; } });
-  return {rows, mono: chords && p.hasChords};
+  const p=parseChart(song.text||''); const k=effKey(song,t); const flats=usesFlats(k); const rows=[]; const parts=[]; let sec='', open=null;
+  const newPart=()=>{ open=null; };
+  p.items.forEach((it,i)=>{
+    if(it.type==='sec'){ sec=it.text; newPart(); }
+    else if(it.type==='gap'){ newPart(); }
+    else if(it.type==='ly'){ if(!open){ open={start:rows.length, end:rows.length, label:sec||'', key:''}; parts.push(open); sec=''; }
+      const pr=p.items[i-1]; rows.push({ly:it.text, ch: chords && p.hasChords && pr?.type==='ch'? transposeLine(pr.text,(song.tr||0)+t,flats).replace(/\s+$/,'') : null, part:parts.length-1}); open.end=rows.length-1; } });
+  // sem estrofes marcadas: corta de 4 em 4
+  if(parts.length<=1 && rows.length>6){ parts.length=0; for(let i=0;i<rows.length;i+=4){ parts.push({start:i,end:Math.min(rows.length-1,i+3),label:'',key:''}); } rows.forEach((r,i)=>r.part=Math.floor(i/4)); }
+  // refrão = estrofe que mais se repete
+  const cnt={}; parts.forEach(pt=>{ pt.key=norm(rows.slice(pt.start,pt.start+2).map(r=>r.ly).join(' ')); cnt[pt.key]=(cnt[pt.key]||0)+1; });
+  let best='', bc=1; for(const [k2,c] of Object.entries(cnt)) if(c>bc){ bc=c; best=k2; }
+  if(!best){ const tw=words(song.title).filter(w=>w.length>2); let bs=0; parts.forEach(pt=>{ const s=tw.filter(w=>norm(rows.slice(pt.start,pt.end+1).map(r=>r.ly).join(' ')).includes(w)).length; if(s>bs){ bs=s; best=pt.key; } }); }
+  parts.forEach(pt=>{ pt.chorus = /refr|coro|chorus/i.test(pt.label) || (!pt.label && best && pt.key===best); if(!pt.label) pt.label= pt.chorus? 'Refrão' : 'Verso'; });
+  return {rows, parts, mono: chords && p.hasChords};
+}
+function chorusOf(song){ if(!song?.text) return []; const r=songRows(song,0,false); const pt=r.parts.find(x=>x.chorus)||r.parts[0]; return pt? r.rows.slice(pt.start, Math.min(pt.end+1, pt.start+2)).map(x=>x.ly) : []; }
+function renderPick(){
+  const used=db.medleys.filter(m=>m.items.length); const today=used.filter(m=>m.today);
+  const miss=[...new Set(used.flatMap(m=>m.items.map(i=>db.songs[i.id]).filter(s=>s && !hasLyrics(s) && !s._busy)))];
+  $('#pickWarn').hidden=!miss.length;
+  if(miss.length) $('#pickWarn').innerHTML=`⚠ ${miss.length} música${miss.length===1?'':'s'} sem letra: `+miss.map(s=>`<button data-ed="${esc(s.id)}">${esc(s.title)}</button>`).join(', ')+'. Toque para colar a letra.';
+  const card=(m,k,isToday)=>{ const songs=m.items.map(i=>db.songs[i.id]).filter(Boolean); const noLy=songs.filter(s=>!hasLyrics(s));
+    return `<div class="pk${isToday?' today':''}" data-pk="${k}" style="cursor:pointer"><div class="ct">${isToday?'Repertório de hoje':esc(m.name)}</div><div class="cs">${esc(songs.slice(0,3).map(s=>s.title).join(' → '))}${songs.length>3?' → +'+(songs.length-3):''}</div>
+    <div class="chips">${isToday? `<span class="chip">${today.length} medley${today.length===1?'':'s'} · ${today.reduce((a,x)=>a+x.items.length,0)} músicas</span>` : m.items.map(i=>{ const s=db.songs[i.id]; const kk=s&&effKey(s,i.t||0); return kk?`<span class="chip">${keyLabel(kk)}</span>`:''; }).join('')}${noLy.map(s=>`<span class="chip w">${esc(s.title)} sem letra</span>`).join('')}</div>
+    <button class="go" data-pk="${k}">▶ Tocar ao vivo</button></div>`; };
+  $('#showPick').innerHTML=(today.length? card({items:today.flatMap(m=>m.items)},'today',true):'')+db.medleys.map((m,i)=>m.items.length? card(m,i,false):'').join('');
 }
 function renderShow(fresh){
   const has=S.list.length>0; S.active=has;
   $('#showEmpty').hidden=has; ['#stTop','#stWrap','#stNav'].forEach(s=>$(s).hidden=!has); $('#heard').hidden=!has || !S.listening; $('#setl').hidden=!has;
-  if(!has){ const today=db.medleys.filter(m=>m.today&&m.items.length);
-    $('#showPick').innerHTML=(today.length?`<button class="pk today" data-pk="today"><b>▶ Repertório de hoje</b><span>${today.length} medley${today.length===1?'':'s'} · ${today.reduce((a,m)=>a+m.items.length,0)} músicas</span></button>`:'')+
-      db.medleys.map((m,i)=>m.items.length?`<button class="pk" data-pk="${i}"><b>▶ ${esc(m.name)}</b><span>${m.items.map(x=>esc(db.songs[x.id]?.title||'')).join(' · ')}</span></button>`:'').join('');
-    return; }
+  if(!has){ renderPick(); return; }
   const it=S.list[S.pos], s=db.songs[it.id];
   if(!s){ S.list.splice(S.pos,1); S.pos=Math.min(S.pos,S.list.length-1); renderShow(fresh); return; }
-  $('#stMed').textContent=`${it.med} · ${it.mi+1}/${it.mn}`; $('#stSong').textContent=s.title; $('#stArtist').textContent=s.artist||'';
+  $('#stMed').textContent=`${it.med} · ${it.mi+1} de ${it.mn}`; $('#stSong').textContent=s.title; $('#stArtist').textContent=s.artist||'';
   const k=effKey(s,it.t); $('#stKey').textContent=k? 'Tom '+keyLabel(k) : 'sem tom'; $('#stKey').className='key'+(k?'':' none');
-  const r=songRows(s, it.t, prefs.showChords); S.rows=r.rows; S.words=r.rows.map(x=>words(x.ly).map(phon)); $('#slide').classList.toggle('mono', r.mono);
+  const r=songRows(s, it.t, prefs.showChords); S.rows=r.rows; S.parts=r.parts; S.words=r.rows.map(x=>words(x.ly).map(phon)); $('#slideBody').classList.toggle('mono', r.mono);
+  $('#parts').innerHTML=r.parts.length>1? r.parts.map((pt,i)=>`<button data-part="${i}" class="${pt.chorus?'ch':''}" title="${esc(pt.label)}: ${esc(r.rows[pt.start]?.ly||'')}"><span>${pt.chorus?'R':''}</span></button>`).join('') : '';
   if(fresh) S.cur=0;
   renderSlide(fresh? 'swap' : 0);
   const nx=S.list[S.pos+1]; const ns=nx && db.songs[nx.id];
   $('#nextSong').disabled=!ns; $('#prevSong').disabled=S.pos===0;
-  if(ns){ const nk=effKey(ns,nx.t); $('#nxLbl').textContent= nx.med!==it.med? 'Próximo medley · '+nx.med : 'Próxima'; $('#nxT').textContent=ns.title+(nk?'  ·  '+keyLabel(nk):''); $('#nxF').textContent=firstLine(ns)? '“'+firstLine(ns)+'”' : (ns.artist||''); }
-  else { $('#nxLbl').textContent='Fim do show'; $('#nxT').textContent='Última música'; $('#nxF').textContent=''; }
+  if(ns){ const nk=effKey(ns,nx.t); $('#nxLbl').textContent= nx.med!==it.med? 'Próximo medley ▸ '+nx.med : 'A seguir ▸'; $('#nxK').textContent=nk?'Tom '+keyLabel(nk):''; $('#nxK').hidden=!nk; $('#nxT').textContent=ns.title;
+    const ch=chorusOf(ns); $('#nxF').innerHTML= ch.length? '“'+ch.map(esc).join('<br>')+'…”' : (hasLyrics(ns)?'':'<span style="color:#ff9b9b">sem letra</span>'); }
+  else { $('#nxLbl').textContent='Fim do medley'; $('#nxK').hidden=true; $('#nxT').textContent='Última música'; $('#nxF').textContent=''; }
   renderSetl();
 }
 function renderSlide(anim){
   const B=$('#slideBody');
-  if(!S.rows.length){ B.innerHTML='<div class="sb-in"><div class="sr r0"><div class="l">Sem letra</div></div><div class="sr"><div class="l">Abra esta música no Repertório e cole a letra ou a cifra.</div></div></div>'; $('#slSec').textContent=''; $('#slCount').textContent=''; $('#prog').style.width='0'; return; }
+  if(!S.rows.length){ B.innerHTML='<div class="empty"><b>Sem letra</b>Abra esta música no Repertório e cole a letra ou a cifra.</div>'; $('#parts').innerHTML=''; return; }
   const c=Math.max(0,Math.min(S.cur,S.rows.length-1)); S.cur=c;
-  let n=+prefs.lines||6; if(n>4 && (innerHeight<640)) n=4; const before=n>=4?1:0;
-  const out=[]; for(let k=-before;k<n-before;k++){ const r=S.rows[c+k]; if(!r){ if(k<0) out.push('<div class="sr rp"><div class="l">&nbsp;</div></div>'); continue; }
-    const cls=k<0?'rp':k===0?'r0':''; const op=k>0? ` style="opacity:${Math.max(.4,1-k*.12)}"` : '';
-    out.push(`<div class="sr ${cls}"${op}>${r.sec&&k>=0?`<div class="s">${esc(r.sec)}</div>`:''}${r.ch?`<div class="c">${esc(r.ch)}</div>`:''}<div class="l">${esc(r.ly)}</div></div>`); }
-  B.innerHTML='<div class="sb-in">'+out.join('')+'</div>';
-  $('#slCount').textContent=`${c+1} / ${S.rows.length}`; $('#slSec').textContent=''; $('#prog').style.width=((c+1)/S.rows.length*100)+'%';
+  let n=+prefs.lines||6; if(innerHeight<700) n=Math.min(n,4); 
+  const pi=S.rows[c].part, pt=S.parts[pi];
+  const out=[]; const ln=(r,cls)=>(r.ch?`<div class="ch">${esc(r.ch)}</div>`:'')+`<div class="ln ${cls}">${esc(r.ly)}</div>`;
+  if(c>0) out.push(ln(S.rows[c-1],'past'));
+  if(pt && pt.start===c) out.push(`<div class="tag">${esc(pt.label)}</div>`);
+  out.push(ln(S.rows[c],'now'));
+  for(let k=1;k<n-1 && S.rows[c+k];k++){ const r=S.rows[c+k]; const p2=S.parts[r.part]; if(p2 && p2.start===c+k) out.push(`<div class="tag" style="opacity:.6">${esc(p2.label)}</div>`); out.push(ln(r,'')); }
+  B.innerHTML=out.join('');
+  $('#parts').querySelectorAll('button').forEach((b,i)=>{ const P=S.parts[i]; b.classList.toggle('done', i<pi); b.classList.toggle('cur', i===pi); if(i===pi) b.style.setProperty('--f', ((c-P.start+1)/(P.end-P.start+1)*100)+'%'); });
   if(anim){ B.classList.remove('enter','swap'); void B.offsetWidth; B.classList.add(anim==='swap'?'swap':'enter'); }
 }
 function setCur(l){ if(!S.rows.length) return; l=Math.max(0,Math.min(S.rows.length-1,l)); if(l===S.cur) return; const d=l>S.cur; S.cur=l; renderSlide(d?'enter':0); }
@@ -962,7 +1058,10 @@ $('#slList').onclick=e=>{ const b=e.target.closest('.sl-s'); if(!b) return; S.po
 function bumpTr(d){ const it=S.list[S.pos]; const s=it&&db.songs[it.id]; if(!s) return; if(!s.key){ toast('Defina o tom desta música no Repertório primeiro.'); return; } let v=(s.tr||0)+d; if(v>6) v-=12; if(v<-6) v+=12; s.tr=v; save(); const c=S.cur; renderShow(false); S.cur=c; renderSlide(); toast(`Tom ${keyLabel(effKey(s,it.t))}${v?` (${v>0?'+':''}${v} do original ${keyLabel(s.key)})`:' (original)'}`, 1600); }
 $('#trUp').onclick=()=>bumpTr(1); $('#trDown').onclick=()=>bumpTr(-1);
 $('#nextSong').onclick=()=>goSong(1); $('#prevSong').onclick=()=>goSong(-1);
-$('#slideBody').addEventListener('click', e=>{ const r=$('#slideBody').getBoundingClientRect(); goSong(e.clientX < r.left + r.width*0.3 ? -1 : 1); });
+$('#slideBody').addEventListener('click', e=>{ const r=$('#slideBody').getBoundingClientRect(); S.pinUntil=Date.now()+4000; setCur(S.cur + (e.clientX < r.left + r.width*0.3 ? -1 : 1)); });
+$('#parts').addEventListener('click', e=>{ const b=e.target.closest('[data-part]'); if(!b) return; const P=S.parts[+b.dataset.part]; S.pinUntil=Date.now()+6000; S.cur=-1; setCur(P.start); });
+$('#nextCard').onclick=()=>goSong(1);
+$('#pickWarn').onclick=e=>{ const b=e.target.closest('[data-ed]'); if(b) openEditor(b.dataset.ed); };
 $('#listBtn').onclick=e=>{ e.stopPropagation(); $('#setl').classList.toggle('open'); };
 document.addEventListener('click', e=>{ if(!e.target.closest('#setl,#listBtn')) $('#setl').classList.remove('open'); });
 $('#fsBtn').onclick=()=>{ const el=document.documentElement; if(document.fullscreenElement) document.exitFullscreen?.(); else (el.requestFullscreen||el.webkitRequestFullscreen)?.call(el); };
@@ -1006,7 +1105,7 @@ function showHeard(){ $('#heard').innerHTML='🎤 '+esc(S.finals.slice(-2).join(
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 async function startListening(){
   if(!SR){ toast('Este navegador não tem reconhecimento de voz. Use o Google Chrome ou o Safari.', 5000); return; }
-  S.listening=true; $('#micBtn').classList.add('live'); $('#micLbl').textContent='Seguindo sua voz'; $('#heard').hidden=false;
+  S.listening=true; $('#micBtn').classList.add('live'); $('#micLbl').textContent='Ouvindo'; $('#heard').hidden=false;
   const rec=new SR(); rec.lang=prefs.lang; rec.continuous=true; rec.interimResults=true;
   rec.onresult=e=>{ let interim=''; for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal){ S.finals.push(r[0].transcript); if(S.finals.length>10) S.finals.shift(); S.interim=''; } else interim+=r[0].transcript; } if(interim) S.interim=interim; showHeard(); follow(); };
   rec.onerror=e=>{ diag('voz: '+e.error); if(e.error==='not-allowed' || e.error==='service-not-allowed'){ stopListening(); toast('O microfone foi bloqueado. Libere o microfone para este site nas configurações do navegador e recarregue.', 7000); } };
@@ -1014,7 +1113,7 @@ async function startListening(){
   S.rec=rec; try{ rec.start(); }catch(e){ diag('voz start: '+e.message); }
   try{ S.wake=await navigator.wakeLock?.request('screen'); }catch{}
 }
-function stopListening(){ S.listening=false; const r=S.rec; S.rec=null; try{ r?.stop(); }catch{} $('#micBtn').classList.remove('live'); $('#micLbl').textContent='Seguir minha voz'; $('#heard').hidden=true; try{ S.wake?.release(); }catch{} }
+function stopListening(){ S.listening=false; const r=S.rec; S.rec=null; try{ r?.stop(); }catch{} $('#micBtn').classList.remove('live'); $('#micLbl').textContent='Ouvir minha voz'; $('#heard').hidden=true; try{ S.wake?.release(); }catch{} }
 $('#showPick').onclick=e=>{ const b=e.target.closest('[data-pk]'); if(!b) return; const k=b.dataset.pk; goLive(k==='today'? undefined : [db.medleys[+k]]); };
 $('#swapBtn').onclick=()=>{ stopListening(); S.list=[]; renderShow(); };
 $('#micBtn').onclick=()=> S.listening? stopListening() : startListening();
@@ -1056,6 +1155,7 @@ const MED_SEED_V=2, MED_SEED=[["Lagoinha Salto - Meu Mestre + Me Ama + Me Leva P
 if((db.medSeedV||0)<MED_SEED_V){ for(const [name,url,songs,v] of MED_SEED){ if((v||1)<=(db.medSeedV||0)) continue; const items=songs.map(([t,a])=>songKey(t,a)).filter(id=>db.songs[id]).map(id=>({id,t:0})); if(items.length) db.medleys[(v||1)>1?'unshift':'push']({id:uid(), auto:false, today:false, name, items, tip:url?'Vídeo: '+url:''}); } db.medSeedV=MED_SEED_V; save(); }
 function renderAll(){ renderLib(); renderMed(); keyUI(); applyPrefs(); }
 renderAll();
+if((db.lyrV||0)<LYR_V){ for(const s of allSongs()){ const ref=lyrRef(s.title,s.artist); if((s.textSrc==='internet'||!s.text) && (ref? s.lyrRef!==ref[0] : ref===0 && s.textSrc==='internet')){ s.text=''; s.textSrc=''; s.noLyrics=false; s.lyrRef=null; } } db.lyrV=LYR_V; save(); }
 if(allSongs().some(s=>!hasLyrics(s) && !s.noLyrics)) queueFill(allSongs().filter(s=>!hasLyrics(s) && !s.noLyrics).map(s=>s.id));
 window.__app={setAllKey, queueFill, hasLyrics, db, S, prefs, autoMedleys, parseChart, keyParse, songRows, claude, fetchLyrics, openShow, goSong};
 </script>
