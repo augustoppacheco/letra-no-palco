@@ -263,7 +263,12 @@ a{color:var(--amber)}
       <button class="btn small" id="newSongBtn">+ Música</button>
     </div>
     <div class="row small">
-      <span class="muted">Colocar todas no tom</span>
+      <button class="btn small primary" id="origGo">🎵 Pôr todas no tom original</button>
+      <span class="dim">O Claude diz o tom da gravação original de cada música; a cifra é transposta junto.</span>
+    </div>
+    <div class="status" id="origStatus"></div>
+    <div class="row small">
+      <span class="muted">Ou colocar todas no tom</span>
       <select id="allKey" style="width:auto;padding:5px 8px"></select>
       <button class="btn small" id="allKeyGo">Aplicar em todas</button>
       <span class="dim">Menores vão para o menor do mesmo nome (ex.: Sol → Gm). A cifra é transposta junto.</span>
@@ -671,7 +676,7 @@ $('#revSave').onclick=()=>{
 let libFilter='all';
 $('#libFilter').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; libFilter=b.dataset.f; $('#libFilter').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderLib(); };
 $('#libQ').oninput=()=>renderLib();
-function keyChip(song, t=0){ const k=effKey(song,t); if(!k) return '<span class="key none">sem tom</span>'; return `<span class="key${song.keySrc==='palpite'?' guess':''}" title="${song.keySrc==='palpite'?'Tom da gravação original (palpite do Claude)':''}">${keyLabel(k)}${t?` <small>(${t>0?'+':''}${t})</small>`:''}</span>`; }
+function keyChip(song, t=0){ const k=effKey(song,t); if(!k) return '<span class="key none">sem tom</span>'; return `<span class="key${song.keySrc==='palpite'?' guess':''}" title="${song.keySrc==='palpite'?'Tom da gravação original (palpite do Claude)':song.keySrc==='original'?'Tom original':''}">${keyLabel(k)}${t?` <small>(${t>0?'+':''}${t})</small>`:''}</span>`; }
 function renderLib(){
   const q=norm($('#libQ').value); let list=allSongs();
   const total=list.length;
@@ -702,6 +707,28 @@ function setAllKey(pc){
   db.medleys.forEach(m=>m.items.forEach(it=>it.t=0));
   save(); renderLib(); renderMed(); return n;
 }
+const ORIG_SYSTEM=`Você é um músico brasileiro experiente. Para cada música da lista, diga o tom da gravação original mais conhecida (do intérprete indicado; se não houver intérprete, da versão mais famosa).
+key: notação americana (C, C#, Db, … B) com "m" para menor, ex.: "G", "Em", "Bb". sure: true se você tem boa certeza, false se é um palpite. Se não conhece a música, key "" e sure false.`;
+const ORIG_SCHEMA={type:'object', additionalProperties:false, required:['keys'], properties:{keys:{type:'array', items:{type:'object', additionalProperties:false, required:['i','key','sure'], properties:{i:{type:'integer'}, key:{type:'string'}, sure:{type:'boolean'}}}}}};
+function applyKey(s, target){ if(s.key && s.text){ let d=((target.pc-s.key.pc)%12+12)%12; if(d>6) d-=12; if(d) s.text=transposeText(s.text, d, usesFlats(target)); } s.key=target; }
+async function setOriginalKeys(){
+  const st=$('#origStatus'); const setS=(m,c='')=>{ st.textContent=m; st.className='status '+c; };
+  const songs=Object.values(db.songs); if(!songs.length){ setS('O repertório está vazio.','err'); return; }
+  if(!prefs.apiKey){ setS('Para descobrir o tom original preciso da sua chave do Claude (Ajustes). Ou baixe a cópia em Ajustes e me mande que eu ajusto.','err'); return; }
+  const btn=$('#origGo'); btn.disabled=true; let done=0, unsure=[], unknown=[];
+  try{
+    for(let i=0;i<songs.length;i+=60){
+      const part=songs.slice(i,i+60); setS(`Perguntando ao Claude… ${i}/${songs.length}`);
+      const out=await claude({system:ORIG_SYSTEM, effort:'medium', maxTokens:16000, schema:ORIG_SCHEMA, content:[{type:'text', text:JSON.stringify(part.map((s,j)=>({i:j, title:s.title, artist:s.artist||''})))}]});
+      for(const r of out.keys||[]){ const s=part[r.i]; if(!s) continue; const k=keyParse(r.key); if(!k){ unknown.push(s.title); continue; }
+        applyKey(s, k); s.keySrc= r.sure? 'original' : 'palpite'; if(!r.sure) unsure.push(s.title); done++; }
+    }
+    db.medleys.forEach(m=>m.items.forEach(it=>it.t=0)); save(); renderLib(); renderMed();
+    setS(`${done} música${done===1?'':'s'} no tom original.`+(unsure.length? ` Confira (palpite): ${unsure.slice(0,8).join(', ')}${unsure.length>8?'…':''}.`:'')+(unknown.length? ` Sem tom conhecido: ${unknown.slice(0,8).join(', ')}.`:''),'ok');
+  }catch(e){ setS(e.message,'err'); }
+  finally{ btn.disabled=false; }
+}
+$('#origGo').onclick=()=>{ if(confirm('Colocar todas as músicas no tom da gravação original? As cifras são transpostas e as transposições dos medleys voltam a zero.')) setOriginalKeys(); };
 $('#allKeyGo').onclick=()=>{ const pc=+$('#allKey').value; const lbl=keyLabel({pc,minor:false}); const n=Object.keys(db.songs).length; if(!n) return;
   if(!confirm(`Colocar as ${n} músicas em ${lbl} (menores em ${lbl}m)? As cifras são transpostas e as transposições dos medleys voltam a zero.`)) return;
   setAllKey(pc); toast(`${n} músicas agora em ${lbl}`); };
