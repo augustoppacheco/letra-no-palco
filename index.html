@@ -262,6 +262,12 @@ a{color:var(--amber)}
       <button class="btn small" id="fillBtn" title="Busca na internet a letra das músicas que estão sem letra">↻ Buscar letras que faltam</button>
       <button class="btn small" id="newSongBtn">+ Música</button>
     </div>
+    <div class="row small">
+      <span class="muted">Colocar todas no tom</span>
+      <select id="allKey" style="width:auto;padding:5px 8px"></select>
+      <button class="btn small" id="allKeyGo">Aplicar em todas</button>
+      <span class="dim">Menores vão para o menor do mesmo nome (ex.: Sol → Gm). A cifra é transposta junto.</span>
+    </div>
     <div class="lib" id="libList"></div>
   </div>
  </div>
@@ -681,6 +687,24 @@ function renderLib(){
 $('#libList').onclick=e=>{ const r=e.target.closest('.song'); if(r) openEditor(r.dataset.id); };
 $('#fillBtn').onclick=()=>{ const ids=allSongs().filter(s=>!hasLyrics(s)).map(s=>{ s.noLyrics=false; return s.id; }); queueFill(ids); toast(`Buscando ${ids.length} letra${ids.length===1?'':'s'}…`); };
 $('#newSongBtn').onclick=()=>openEditor(null);
+$('#allKey').innerHTML=SH.map((_,pc)=>{ const l=keyLabel({pc,minor:false}); return `<option value="${pc}"${pc===7?' selected':''}>${l} (${['Dó','Dó#','Ré','Mi♭','Mi','Fá','Fá#','Sol','Lá♭','Lá','Si♭','Si'][pc]})</option>`; }).join('');
+function transposeText(text, d, flats){ if(!d) return text; return String(text).split('\n').map(line=>{
+  const tm=line.match(/^(\s*tom\s*:\s*)([A-G][#b]?m?)(.*)$/i); if(tm){ const k=keyParse(tm[2]); return k? tm[1]+keyLabel({pc:(k.pc+d+12)%12, minor:k.minor})+tm[3] : line; }
+  const sec=line.match(/^(\s*\[[^\]]+\]\s*)(.*)$/); if(sec && sec[2].trim() && isChordLine(sec[2])) return sec[1]+transposeLine(sec[2], d, flats);
+  return isChordLine(line)? transposeLine(line, d, flats) : line; }).join('\n'); }
+function setAllKey(pc){
+  let n=0;
+  for(const s of Object.values(db.songs)){
+    const minor=!!s.key?.minor; const target={pc, minor};
+    if(s.key){ let d=((pc-s.key.pc)%12+12)%12; if(d>6) d-=12; if(d && s.text) s.text=transposeText(s.text, d, usesFlats(target)); if(!s.origKey) s.origKey=s.key; }
+    s.key=target; s.keySrc='manual'; n++;
+  }
+  db.medleys.forEach(m=>m.items.forEach(it=>it.t=0));
+  save(); renderLib(); renderMed(); return n;
+}
+$('#allKeyGo').onclick=()=>{ const pc=+$('#allKey').value; const lbl=keyLabel({pc,minor:false}); const n=Object.keys(db.songs).length; if(!n) return;
+  if(!confirm(`Colocar as ${n} músicas em ${lbl} (menores em ${lbl}m)? As cifras são transpostas e as transposições dos medleys voltam a zero.`)) return;
+  setAllKey(pc); toast(`${n} músicas agora em ${lbl}`); };
 
 /* ================= editor de música ================= */
 let edId=null;
@@ -967,7 +991,7 @@ document.querySelector('nav.tabs').onclick=e=>{ const b=e.target.closest('button
 function renderAll(){ renderLib(); renderMed(); keyUI(); applyPrefs(); }
 renderAll();
 if(allSongs().some(s=>!hasLyrics(s) && !s.noLyrics)) queueFill(allSongs().filter(s=>!hasLyrics(s) && !s.noLyrics).map(s=>s.id));
-window.__app={db, S, prefs, autoMedleys, parseChart, keyParse, songRows, claude, fetchLyrics, openShow, goSong};
+window.__app={setAllKey, queueFill, hasLyrics, db, S, prefs, autoMedleys, parseChart, keyParse, songRows, claude, fetchLyrics, openShow, goSong};
 </script>
 </body>
 </html>
