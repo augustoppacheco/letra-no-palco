@@ -300,7 +300,7 @@ nav.tabs button[aria-selected="true"]{background:rgba(255,255,255,.1)}
 <body>
 <div class="app">
 <header class="top">
-  <div class="brand"><i></i>Letra no Palco</div>
+  <div class="brand"><i></i>Letra no Palco <small id="appV" style="font-size:11px;opacity:.55;font-weight:500;margin-left:6px"></small></div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="rep" aria-selected="true">Repertório</button>
     <button role="tab" data-tab="med" aria-selected="false">Medleys</button>
@@ -1069,8 +1069,10 @@ function renderFull(B){
     const cls='fp'+(pt.chorus?' cho':'')+(i===pi?' cur':'');
     const lines=[]; S.rows.slice(pt.start,pt.end+1).forEach(r=>{ const k=norm(r.ly); const last=lines[lines.length-1];
       if(last && last.k===k){ last.n++; return; } lines.push({r,k,n:1}); });
+    for(let i=0;i<lines.length;i++) for(let p=2;p<=4;p++){ const same=j=>{ for(let q=0;q<p;q++){ const a=lines[i+q],b=lines[j+q]; if(!a||!b||a.k!==b.k) return false; } return true; };
+      let reps=1; while(same(i+reps*p)) reps++; if(reps>1){ lines.splice(i+p,(reps-1)*p); lines[i+p-1].bn=reps; lines[i+p-1].blk=p; break; } }
     const keep=lines.filter(l=>!(seenL.has(l.k) && !pt.chorus)); if(!keep.length) return; keep.forEach(l=>seenL.add(l.k));
-    out.push(`<div class="${cls}" data-part="${i}"><div class="ft">${esc(pt.label)}</div>`+keep.map(({r,n})=>(r.ch?`<div class="fc">${esc(r.ch)}</div>`:'')+`<div class="fl">${esc(r.ly)}${n>1?` <span class="x">×${n}</span>`:''}</div>`).join('')+'</div>'); });
+    out.push(`<div class="${cls}" data-part="${i}"><div class="ft">${esc(pt.label)}</div>`+keep.map(({r,n,blk,bn})=>(r.ch?`<div class="fc">${esc(r.ch)}</div>`:'')+`<div class="fl">${esc(r.ly)}${n>1?` <span class="x">×${n}</span>`:''}${blk?` <span class="x">↑ ${blk} linhas ×${bn}</span>`:''}</div>`).join('')+'</div>'); });
   B.innerHTML=out.join(''); fitFull(B);
   $('#parts').querySelectorAll('button').forEach((b,i)=>{ b.classList.toggle('done', i<pi); b.classList.toggle('cur', i===pi); b.style.setProperty('--f','100%'); });
 }
@@ -1206,6 +1208,9 @@ for(const s of allSongs()){ const t=LYRICS[s.id]; if(t && (!s.text || s.textSrc=
 if(!db.fixShalom){ const m=db.medleys.find(x=>x.name==='John Dias - Lagoinha Salto: Ah Jesus + Me Ama + Lamparina'); if(m && !m.items.some(i=>i.id==='shalom|john dias') && db.songs['shalom|john dias']){ const k=m.items.findIndex(i=>i.id==='me ama|gabriela rocha'); m.items.splice(k<0?m.items.length:k,0,{id:'shalom|john dias',t:0}); } db.fixShalom=1; save(); }
 if((db.lyrV||0)<LYR_V){ for(const s of allSongs()){ const ref=lyrRef(s.title,s.artist); if((s.textSrc==='internet'||!s.text) && (ref? s.lyrRef!==ref[0] : ref===0 && s.textSrc==='internet')){ s.text=''; s.textSrc=''; s.noLyrics=false; s.lyrRef=null; } } db.lyrV=LYR_V; save(); }
 if(allSongs().some(s=>!hasLyrics(s) && !s.noLyrics)) queueFill(allSongs().filter(s=>!hasLyrics(s) && !s.noLyrics).map(s=>s.id));
+const APP_V='26/11 d';
+(function(){ const e=document.getElementById('appV'); if(e) e.textContent='v '+APP_V;
+  fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{ const m=t.match(/const APP_V='([^']+)'/); if(m && m[1]!==APP_V){ let n=0; try{ n=+sessionStorage.getItem('lnpUpd')||0; sessionStorage.setItem('lnpUpd',n+1); }catch(_){} if(n<2) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])+'-'+Date.now()); } }).catch(()=>{}); })();
 window.__app={setAllKey, queueFill, hasLyrics, db, S, prefs, autoMedleys, parseChart, keyParse, songRows, claude, fetchLyrics, openShow, goSong};
 </script>
 </body>
