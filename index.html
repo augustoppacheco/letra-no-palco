@@ -258,6 +258,26 @@ nav.tabs button[aria-selected="true"]{background:rgba(255,255,255,.1)}
 .ctl .b.p{background:var(--grad);color:#1a1010}
 .ctl .b:disabled{opacity:.35}
 .heard{text-align:center}
+.fullmode .lv-t{font-size:22px;margin-top:0}
+.fullmode .lv-med{margin-top:6px!important}
+.fullmode .lv-sub{margin-top:2px}
+.fullmode .nextc{padding:8px 14px;display:flex;align-items:center;gap:10px;border-radius:16px}
+.fullmode .nextc .ref{display:none}
+.fullmode .nx2{margin:0;font-size:16px;flex:1;min-width:0}
+.fullmode .ctl .b{height:46px}
+.fullmode .parts{display:none}
+.lyr.full{display:block;overflow:auto;padding:4px 0;column-gap:28px;--ff:20px;justify-content:flex-start}
+.lyr.full .fp{break-inside:avoid;padding:6px 10px 8px;margin:0 -10px 6px;border-radius:12px;cursor:pointer}
+.lyr.full .fp.cho{background:rgba(255,154,107,.08)}
+.lyr.full .fp.cur{box-shadow:inset 3px 0 0 var(--amber);background:rgba(247,185,85,.10)}
+.lyr.full .ft{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#ff9a6b;font-weight:800;margin-bottom:2px}
+.lyr.full .fl{font:600 var(--ff)/1.3 var(--f-body);color:#eee9f7}
+.lyr.full .fp.cho .fl{color:#fff;font-weight:700}
+.lyr.full .fc{font:700 calc(var(--ff)*.72)/1.1 var(--f-mono);color:rgba(247,185,85,.8);white-space:pre}
+.lyr.full .reps{font-size:calc(var(--ff)*.78);color:#ff9a6b;font-weight:700;padding:2px 0 8px;line-height:1.7;break-inside:avoid}
+.lyr.full .reps b{color:var(--muted);font-weight:500;cursor:pointer;padding:1px 6px;border-radius:6px;margin-left:2px}
+.lyr.full .reps b.cho{color:#ffc7a8}
+.lyr.full .reps b.cur{background:rgba(247,185,85,.18);color:#fff}
 .toast{background:rgba(30,26,42,.92)!important;color:var(--paper)!important;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);border-radius:16px!important}
 /* escolher medley */
 .stage-empty{max-width:640px;width:100%;align-items:stretch;text-align:left;margin:0 auto}
@@ -392,6 +412,7 @@ nav.tabs button[aria-selected="true"]{background:rgba(255,255,255,.1)}
       <button class="mic" id="micBtn"><span class="dot"></span><span id="micLbl">Ouvir minha voz</span></button>
       <button class="ib" id="listBtn" title="Lista do show">☰</button>
       <button class="ib" id="swapBtn" title="Trocar medley">⇄</button>
+      <button class="ib" id="viewBtn" title="Trocar entre letra inteira e linha a linha" style="width:auto;padding:0 12px;font-size:13px;font-weight:700">Aa</button>
       <button class="ib" id="fsBtn" title="Tela cheia">⛶</button>
     </div>
     <div class="lv-main" id="stWrap" hidden>
@@ -511,7 +532,8 @@ const LS='letraNoPalco.v2';
 let db = (()=>{ try{ return JSON.parse(localStorage.getItem(LS)) || null; }catch{ return null; } })();
 if(!db){ db={songs:{}, medleys:[], prefs:{}}; migrateOld(); }
 db.songs ||= {}; db.medleys ||= []; db.prefs ||= {};
-const prefs = Object.assign({font:34, lines:6, autoNext:false, showChords:true, apiKey:'', medSize:4, lang:'pt-BR'}, db.prefs); db.prefs=prefs;
+const prefs = Object.assign({view:'full', font:34, lines:6, autoNext:false, showChords:true, apiKey:'', medSize:4, lang:'pt-BR'}, db.prefs); db.prefs=prefs;
+if((db.viewV||0)<1){ prefs.view='full'; db.viewV=1; }
 if((db.autoNextV||0)<1){ prefs.autoNext=true; db.autoNextV=1; }
 let saveT;
 function save(){ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem(LS, JSON.stringify(db)); }catch(e){ toast('Não consegui salvar no aparelho: '+e.message, 5000); } }, 150); }
@@ -941,7 +963,7 @@ function renderToday(){
     : `<div><b>Repertório de hoje vazio</b><div class="small muted">Toque em “+ Repertório de hoje” nos medleys do show. Eles tocam na ordem desta página (use ↑ ↓ para reordenar).</div></div>`;
 }
 $('#todayBar').onclick=e=>{ if(e.target.closest('[data-act=play]')) goLive(); };
-function goLive(meds){ openShow(meds); if(S.list.length && !S.listening){ Promise.resolve().then(startListening).catch(()=>{}); } }
+function goLive(meds){ openShow(meds); if(S.list.length && !S.listening && prefs.view!=='full'){ Promise.resolve().then(startListening).catch(()=>{}); } }
 function renderMed(){
   renderToday();
   const addOpts = '<option value="">+ adicionar música…</option>'+allSongs().map(s=>`<option value="${esc(s.id)}">${esc(s.title)}${s.key?' ('+keyLabel(s.key)+')':''}</option>`).join('');
@@ -998,7 +1020,7 @@ function songRows(song, t, chords){
   if(parts.length<=1 && rows.length>6){ parts.length=0; for(let i=0;i<rows.length;i+=4){ parts.push({start:i,end:Math.min(rows.length-1,i+3),label:'',key:''}); } rows.forEach((r,i)=>r.part=Math.floor(i/4)); }
   // refrão = estrofe que mais se repete
   const cnt={}; parts.forEach(pt=>{ pt.key=norm(rows.slice(pt.start,pt.start+2).map(r=>r.ly).join(' ')); cnt[pt.key]=(cnt[pt.key]||0)+1; });
-  let best='', bc=1; for(const [k2,c] of Object.entries(cnt)) if(c>bc){ bc=c; best=k2; }
+  const tws=words(song.title).filter(w=>w.length>2); let best='', bc=1.5; for(const [k2,c] of Object.entries(cnt)){ if(c<2) continue; const sc=c+tws.filter(w=>k2.includes(w)).length*1.5; if(sc>bc){ bc=sc; best=k2; } }
   if(!best){ const tw=words(song.title).filter(w=>w.length>2); let bs=0; parts.forEach(pt=>{ const s=tw.filter(w=>norm(rows.slice(pt.start,pt.end+1).map(r=>r.ly).join(' ')).includes(w)).length; if(s>bs){ bs=s; best=pt.key; } }); }
   parts.forEach(pt=>{ pt.chorus = /refr|coro|chorus/i.test(pt.label) || (!pt.label && best && pt.key===best); if(!pt.label) pt.label= pt.chorus? 'Refrão' : 'Verso'; });
   return {rows, parts, mono: chords && p.hasChords};
@@ -1034,9 +1056,26 @@ function renderShow(fresh){
   else { $('#nxLbl').textContent='Fim do medley'; $('#nxK').hidden=true; $('#nxT').textContent='Última música'; $('#nxF').textContent=''; }
   renderSetl();
 }
+function fitFull(B){
+  B.style.columnCount=''; let f=26; B.style.setProperty('--ff', f+'px');
+  while(f>12 && B.scrollHeight>B.clientHeight+2){ f-=1; B.style.setProperty('--ff', f+'px'); }
+  if(B.scrollHeight>B.clientHeight+2 && B.clientWidth>=620){ B.style.columnCount=2; f=22; B.style.setProperty('--ff', f+'px'); while(f>12 && B.scrollHeight>B.clientHeight+2){ f-=1; B.style.setProperty('--ff', f+'px'); } }
+}
+function renderFull(B){
+  B.classList.add('full'); const pi=S.rows[Math.max(0,S.cur)]?.part ?? 0; const seen={}; const out=[];
+  S.parts.forEach((pt,i)=>{ const txt=S.rows.slice(pt.start,pt.end+1).map(r=>r.ly).join('\n'); const k=norm(txt);
+    const cls='fp'+(pt.chorus?' cho':'')+(i===pi?' cur':'');
+    if(seen[k]!=null){ const last=out[out.length-1]; const item=`<b data-part="${i}" class="${pt.chorus?'cho':''}${i===pi?' cur':''}">“${esc(S.rows[pt.start].ly)}…”</b>`; if(last && last.startsWith('<div class="reps">')) out[out.length-1]=last.replace('</div>', ' '+item+'</div>'); else out.push(`<div class="reps">↻ repete ${item}</div>`); return; }
+    seen[k]=i;
+    out.push(`<div class="${cls}" data-part="${i}"><div class="ft">${esc(pt.label)}</div>`+S.rows.slice(pt.start,pt.end+1).map(r=>(r.ch?`<div class="fc">${esc(r.ch)}</div>`:'')+`<div class="fl">${esc(r.ly)}</div>`).join('')+'</div>'); });
+  B.innerHTML=out.join(''); fitFull(B);
+  $('#parts').querySelectorAll('button').forEach((b,i)=>{ b.classList.toggle('done', i<pi); b.classList.toggle('cur', i===pi); b.style.setProperty('--f','100%'); });
+}
 function renderSlide(anim){
-  const B=$('#slideBody');
+  document.querySelector('.stage-main').classList.toggle('fullmode', prefs.view==='full');
+  const B=$('#slideBody'); B.classList.remove('full'); B.style.columnCount='';
   if(!S.rows.length){ B.innerHTML='<div class="empty"><b>Sem letra</b>Abra esta música no Repertório e cole a letra ou a cifra.</div>'; $('#parts').innerHTML=''; return; }
+  if(prefs.view==='full'){ renderFull(B); return; }
   const c=Math.max(0,Math.min(S.cur,S.rows.length-1)); S.cur=c;
   let n=+prefs.lines||6; if(innerHeight<700) n=Math.min(n,4); 
   const pi=S.rows[c].part, pt=S.parts[pi];
@@ -1061,9 +1100,11 @@ $('#slList').onclick=e=>{ const b=e.target.closest('.sl-s'); if(!b) return; S.po
 function bumpTr(d){ const it=S.list[S.pos]; const s=it&&db.songs[it.id]; if(!s) return; if(!s.key){ toast('Defina o tom desta música no Repertório primeiro.'); return; } let v=(s.tr||0)+d; if(v>6) v-=12; if(v<-6) v+=12; s.tr=v; save(); const c=S.cur; renderShow(false); S.cur=c; renderSlide(); toast(`Tom ${keyLabel(effKey(s,it.t))}${v?` (${v>0?'+':''}${v} do original ${keyLabel(s.key)})`:' (original)'}`, 1600); }
 $('#trUp').onclick=()=>bumpTr(1); $('#trDown').onclick=()=>bumpTr(-1);
 $('#nextSong').onclick=()=>goSong(1); $('#prevSong').onclick=()=>goSong(-1);
-$('#slideBody').addEventListener('click', e=>{ const r=$('#slideBody').getBoundingClientRect(); S.pinUntil=Date.now()+4000; setCur(S.cur + (e.clientX < r.left + r.width*0.3 ? -1 : 1)); });
-$('#parts').addEventListener('click', e=>{ const b=e.target.closest('[data-part]'); if(!b) return; const P=S.parts[+b.dataset.part]; S.pinUntil=Date.now()+6000; S.cur=-1; setCur(P.start); });
+$('#slideBody').addEventListener('click', e=>{ if(prefs.view==='full'){ const fp=e.target.closest('[data-part]'); if(fp){ S.cur=S.parts[+fp.dataset.part].start; renderSlide(); } return; } const r=$('#slideBody').getBoundingClientRect(); S.pinUntil=Date.now()+4000; setCur(S.cur + (e.clientX < r.left + r.width*0.3 ? -1 : 1)); });
+$('#parts').addEventListener('click', e=>{ const b=e.target.closest('[data-part]'); if(!b) return; const P=S.parts[+b.dataset.part]; if(prefs.view==='full'){ S.cur=P.start; renderSlide(); $('#slideBody .fp.cur')?.scrollIntoView({block:'nearest',behavior:'smooth'}); return; } S.pinUntil=Date.now()+6000; S.cur=-1; setCur(P.start); });
 $('#nextCard').onclick=()=>goSong(1);
+$('#viewBtn').onclick=()=>{ prefs.view= prefs.view==='full'?'line':'full'; save(); renderSlide(); toast(prefs.view==='full'?'Letra inteira na tela':'Linha a linha (segue a voz)',1400); };
+addEventListener('resize',()=>{ if(S.active && prefs.view==='full') fitFull($('#slideBody')); });
 $('#pickWarn').onclick=e=>{ const b=e.target.closest('[data-ed]'); if(b) openEditor(b.dataset.ed); };
 $('#listBtn').onclick=e=>{ e.stopPropagation(); $('#setl').classList.toggle('open'); };
 document.addEventListener('click', e=>{ if(!e.target.closest('#setl,#listBtn')) $('#setl').classList.remove('open'); });
