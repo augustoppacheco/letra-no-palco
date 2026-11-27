@@ -965,6 +965,8 @@ function renderToday(){
 }
 $('#todayBar').onclick=e=>{ if(e.target.closest('[data-act=play]')) goLive(); };
 function goLive(meds){ openShow(meds); if(S.list.length && !S.listening && prefs.view!=='full'){ Promise.resolve().then(startListening).catch(()=>{}); } }
+function medText(m){ return '*'+m.name.replace(/\s*https?:\S+/g,'')+'*\n'+m.items.map((it,i)=>{ const s=db.songs[it.id]; if(!s) return ''; const k=effKey(s,it.t||0); return `${i+1}. ${s.title}${k?' ('+keyLabel(k)+')':''}`; }).filter(Boolean).join('\n'); }
+function shareMed(m){ const t=medText(m); if(navigator.share){ navigator.share({text:t}).catch(()=>{}); } else location.href='https://wa.me/?text='+encodeURIComponent(t); }
 function renderMed(){
   renderToday();
   const addOpts = '<option value="">+ adicionar música…</option>'+allSongs().map(s=>`<option value="${esc(s.id)}">${esc(s.title)}${s.key?' ('+keyLabel(s.key)+')':''}</option>`).join('');
@@ -977,7 +979,7 @@ function renderMed(){
         return `<div class="mi" data-i="${ii}"><span class="n">${ii+1}</span><div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="fl">${fl? '“'+esc(fl)+'”' : esc(s.artist||'')}</div></div>
           <div class="ctl">${keyChip(s, it.t||0)}<button data-act="tdown" title="Descer meio tom">−</button><button data-act="tup" title="Subir meio tom">+</button><button data-act="up" title="Mover para cima">▲</button><button data-act="down" title="Mover para baixo">▼</button><button data-act="rm" title="Tirar do medley">✕</button></div></div>`; }).join('') || '<div class="small muted" style="padding:6px 0">Vazio. Adicione músicas abaixo.</div>'}</div>
       <div class="row"><select data-act="add" style="flex:1;padding:6px 8px;font-size:14px">${addOpts}</select></div>
-      <div class="row"><button class="btn primary" data-act="playm" ${m.items.length?'':'disabled'}>▶ Tocar ao vivo</button><button class="toggle" data-act="today" aria-pressed="${!!m.today}">${m.today?'✓ No repertório de hoje':'+ Repertório de hoje'}</button><span class="spacer"></span>
+      <div class="row"><button class="btn primary" data-act="playm" ${m.items.length?'':'disabled'}>▶ Tocar ao vivo</button><button class="btn small" data-act="share" title="Mandar só a lista das músicas">📤 WhatsApp</button><button class="toggle" data-act="today" aria-pressed="${!!m.today}">${m.today?'✓ No repertório de hoje':'+ Repertório de hoje'}</button><span class="spacer"></span>
         <button class="btn small ghost icon" data-act="mup" title="Mover medley para cima">↑</button><button class="btn small ghost icon" data-act="mdown" title="Mover medley para baixo">↓</button><button class="btn small ghost danger" data-act="mdel">Excluir</button></div>
     </div>`; }).join('') : '<div class="empty">Nenhum medley ainda. Toque em “Montar automaticamente”.</div>';
 }
@@ -990,6 +992,7 @@ $('#medList').addEventListener('click', e=>{
   else if(act==='rm'){ m.items.splice(i,1); mark(); }
   else if(act==='today'){ m.today=!m.today; }
   else if(act==='playm'){ goLive([m]); return; }
+  else if(act==='share'){ shareMed(m); return; }
   else if(act==='mup'||act==='mdown'){ const k=+card.dataset.m, j=k+(act==='mup'?-1:1); if(j<0||j>=db.medleys.length) return; [db.medleys[k],db.medleys[j]]=[db.medleys[j],db.medleys[k]]; }
   else if(act==='mdel'){ if(!confirm(`Excluir o medley "${m.name}"? As músicas continuam no repertório.`)) return; db.medleys.splice(+card.dataset.m,1); }
   else return;
@@ -1208,7 +1211,7 @@ for(const s of allSongs()){ const t=LYRICS[s.id]; if(t && (!s.text || s.textSrc=
 if(!db.fixShalom){ const m=db.medleys.find(x=>x.name==='John Dias - Lagoinha Salto: Ah Jesus + Me Ama + Lamparina'); if(m && !m.items.some(i=>i.id==='shalom|john dias') && db.songs['shalom|john dias']){ const k=m.items.findIndex(i=>i.id==='me ama|gabriela rocha'); m.items.splice(k<0?m.items.length:k,0,{id:'shalom|john dias',t:0}); } db.fixShalom=1; save(); }
 if((db.lyrV||0)<LYR_V){ for(const s of allSongs()){ const ref=lyrRef(s.title,s.artist); if((s.textSrc==='internet'||!s.text) && (ref? s.lyrRef!==ref[0] : ref===0 && s.textSrc==='internet')){ s.text=''; s.textSrc=''; s.noLyrics=false; s.lyrRef=null; } } db.lyrV=LYR_V; save(); }
 if(allSongs().some(s=>!hasLyrics(s) && !s.noLyrics)) queueFill(allSongs().filter(s=>!hasLyrics(s) && !s.noLyrics).map(s=>s.id));
-const APP_V='26/11 e';
+const APP_V='27/11 a';
 (function(){ const e=document.getElementById('appV'); if(e) e.textContent='v '+APP_V;
   fetch(location.pathname+'?nc='+Date.now(),{cache:'no-store'}).then(r=>r.text()).then(t=>{ const m=t.match(/const APP_V='([^']+)'/); if(m && m[1]!==APP_V){ let n=0; try{ n=+sessionStorage.getItem('lnpUpd')||0; sessionStorage.setItem('lnpUpd',n+1); }catch(_){} if(n<2) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])+'-'+Date.now()); } }).catch(()=>{}); })();
 window.__app={setAllKey, queueFill, hasLyrics, db, S, prefs, autoMedleys, parseChart, keyParse, songRows, claude, fetchLyrics, openShow, goSong};
